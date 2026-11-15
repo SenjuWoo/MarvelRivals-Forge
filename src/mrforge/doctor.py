@@ -84,6 +84,14 @@ def game_checks(game_arg, flagged_scan: bool = True) -> tuple[list[dict], dict]:
                   "" if ld["present"] else "install the ASI loader + UTOC signature bypass through your mod manager; mods will not load without it"))
     out.append(_c("mods_dir", "ok" if info["mods_dir_exists"] else "warn", info["mods_dir"],
                   "" if info["mods_dir_exists"] else "mrforge deploy creates it"))
+    try:
+        from .mesh import leftover_views
+        lv = leftover_views(info["root"])
+        if lv:
+            out.append(_c("vanilla_views", "warn", f"leftover hardlink views: {lv}",
+                          "delete them (they are hardlinks; deleting frees nothing the game needs)"))
+    except OSError:
+        pass
     if info["running"]:
         out.append(_c("game_running", "warn", "the game is running", "close it before deploy/undeploy"))
     if flagged_scan:

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Mesh route preview: `mrforge mesh export [--lobby]` exports the skin's vanilla mesh through fmodel-mcp from a
+  temporary hardlink view of the game containers (installed mods can never leak in), `mesh blend` imports it into
+  Blender headless, `mesh fbx` writes FBX, `mesh check` compares bones, hierarchy, material slots and vertex groups
+  with vanilla. `doctor` reports leftover views.
+- Release and mod zips store entries uncompressed so they are byte-identical on every OS.
+
 ## 0.1.0 - 2026-11-15
 
 First release: texture and material routes, editor-free.

@@ -382,6 +382,28 @@ def cmd_mat(args, out):
     raise UsageError("unknown mat action")
 
 
+def cmd_mesh(args, out):
+    from . import mesh as X
+    root = _project(args)
+    a = args.action
+    if a == "export":
+        d = X.export(root, args.lobby, args.game)
+    elif a == "blend":
+        d = X.blend(root, args.force)
+    elif a == "fbx":
+        d = X.fbx(root)
+    elif a == "check":
+        d, ok = X.check(root)
+        for c in d["checks"]:
+            for prob in c["problems"]:
+                out.errors.append({"code": "MESH_CHECK", "message": f"{c['mesh']}: {prob}",
+                                   "fix": "restore bone names/hierarchy and material slot names/order to vanilla"})
+    else:
+        raise UsageError(f"unknown mesh action {a}")
+    out.gaps.append("mesh build (Unreal 5.3.2 cook) is not productized yet; see mrforge knowledge mesh-route")
+    return d
+
+
 def cmd_build(args, out):
     from .build import run
     d = run(_project(args))
@@ -576,6 +598,17 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("material")
     for name, sp in ms.choices.items():
         sp.set_defaults(fn=cmd_mat, cmdname=f"mat {name}")
+
+    s = add("mesh", cmd_mesh, "mesh route (v0.2 preview): export vanilla mesh, Blender .blend/FBX, check against vanilla")
+    xs = s.add_subparsers(dest="action", required=True, parser_class=Parser)
+    t = xs.add_parser("export", description="export the skin's vanilla mesh (.uemodel + materials + PNG) via fmodel-mcp")
+    t.add_argument("--lobby", action="store_true", help="also export the _Lobby mesh")
+    t = xs.add_parser("blend", description="import the exported .uemodel into a .blend (headless Blender)")
+    t.add_argument("--force", action="store_true", help="re-import over an existing .blend")
+    xs.add_parser("fbx", description="export the .blend to build/fbx/*.fbx (no leaf bones)")
+    xs.add_parser("check", description="bones, hierarchy, material slots and vertex groups must match vanilla")
+    for name, sp in xs.choices.items():
+        sp.set_defaults(fn=cmd_mesh, cmdname=f"mesh {name}")
 
     add("build", cmd_build, "inject/convert changed assets and pack the mod")
     s = add("validate", cmd_validate, "rules over the built mod; evidence tiers")

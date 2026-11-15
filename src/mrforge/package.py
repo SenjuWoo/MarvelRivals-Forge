@@ -28,10 +28,10 @@ def run(root: Path) -> dict:
     entries.sort(key=lambda e: e[0])
     out = root / "dist" / f"{m['pak_name']}-{m['version']}.zip"
     tmp = out.with_name(out.name + ".tmp")
-    with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+    with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_STORED) as zf:
         for name, data in entries:
             zi = zipfile.ZipInfo(name, date_time=FIXED_TIME)
-            zi.compress_type = zipfile.ZIP_DEFLATED
+            zi.compress_type = zipfile.ZIP_STORED  # identical bytes on every OS; the containers are already Oodle-compressed
             zi.external_attr = 0o644 << 16
             zi.create_system = 0
             zf.writestr(zi, data)

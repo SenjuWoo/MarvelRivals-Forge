@@ -45,7 +45,7 @@ def main() -> int:
     zpath = out_dir / f"{name}.zip"
     manifest = []
     tmp = zpath.with_name(zpath.name + ".tmp")
-    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
+    with zipfile.ZipFile(tmp, "w", zipfile.ZIP_STORED) as zf:
         for f in files:
             data = (ROOT / f).read_bytes()
             # Normalise text line endings the way .gitattributes checks them out, so archives match across OSes.
@@ -53,7 +53,7 @@ def main() -> int:
                 lf = data.replace(b"\r\n", b"\n")
                 data = lf.replace(b"\n", b"\r\n") if f.lower().endswith((".bat", ".cmd", ".ps1")) else lf
             zi = zipfile.ZipInfo(f"{name}/{f}", date_time=FIXED)
-            zi.compress_type = zipfile.ZIP_DEFLATED
+            zi.compress_type = zipfile.ZIP_STORED  # deflate output differs between zlib builds (zlib vs zlib-ng)
             zi.external_attr = 0o644 << 16
             zi.create_system = 0
             zf.writestr(zi, data)
