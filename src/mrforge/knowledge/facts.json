@@ -163,14 +163,14 @@
     },
     {
       "id": "mesh.fmodel",
-      "statement": "fmodel-mcp exports SK_1061_1061303 as .uemodel + material JSON + PNG in about 17 s; with an override mod deployed it exports the mod's version.",
+      "statement": "fmodel-mcp exports SK_1061_1061303 as .uemodel + material JSON + PNG in about 15 s; opened on the game Paks folder it would export an installed override mod's version, so the forge opens a vanilla hardlink view.",
       "tier": "verified-local",
       "source": "planning spike",
       "date": "2026-11-15"
     },
     {
       "id": "mesh.blender",
-      "statement": "Blender 5.3 imports .uemodel headless through ueformat-blender without installing the add-on: 81,410 vertices, 18 materials, 488 bones.",
+      "statement": "Blender 5.3 imports .uemodel headless through ueformat-blender without installing the add-on: vanilla SK_1061_1061303 = 95,767 vertices, 18 slots, 481 bones (sockets off).",
       "tier": "verified-local",
       "source": "planning spike",
       "date": "2026-11-15"
@@ -208,6 +208,69 @@
       "statement": "Textures injected at a different resolution than vanilla are assumed to load.",
       "tier": "reported",
       "source": "unverified (assumption A5); tex replace resizes to vanilla dims by default",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.vanilla_view",
+      "statement": "fmodel-mcp mounts every archive under the opened folder incl. ~mods; a temporary folder of hardlinks to the top-level containers (same volume) gives a vanilla-only view: 154 links in 0.03 s, 76 archives, overridden meshes resolve to pakchunkCharacter.",
+      "tier": "verified-local",
+      "source": "T30 live",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.sockets",
+      "statement": "ueformat-blender with sockets on adds bones (488 vs the 481-bone reference skeleton of SK_1061_1061303, with extra roots); Unreal refuses multiple roots. Import with sockets and virtual bones off.",
+      "tier": "verified-local",
+      "source": "T32 spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.slot_merge",
+      "statement": "Blender names materials after the material asset; two game slots sharing one instance (Equip_05/Equip_03) merge in FBX unless each slot gets a unique material named like the game slot.",
+      "tier": "verified-local",
+      "source": "T32 spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.unversioned_cook",
+      "statement": "A stock UE 5.3.2 -unversioned cook of a SkeletalMesh is unreadable with the game's mappings (class schemas differ); a versioned cook converts correctly through UAssetTool create_mod_iostore.",
+      "tier": "verified-local",
+      "source": "T32 spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.retoc_tagged",
+      "statement": "retoc-rivals-cli 3.11.1 pack refuses versioned (tagged) cooked assets: 'Expected to find zero UE3 version'.",
+      "tier": "verified-local",
+      "source": "T32 spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.tags",
+      "statement": "UAssetTool create_mod_iostore pads FSkeletalMaterial with the game's FGameplayTagContainer; tags come only from RivalsMeshMaterialManager MaterialTagAssetUserData (without it every slot's tags are empty).",
+      "tier": "verified-local",
+      "source": "T32 spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.placeholders",
+      "statement": "The cooked mesh keeps vanilla references when placeholders exist at the vanilla paths: Skeleton and PhysicsAsset (hero 001 folder), post-process AnimBP class, one MaterialInstanceConstant per slot incl. VFX paths.",
+      "tier": "verified-local",
+      "source": "T32 dump of the cooked mesh",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.extract_mod_leak",
+      "statement": "extract_iostore_legacy --mod with a substring filter also extracts matching vanilla packages that the mod lacks; check the exact package path came from the mod.",
+      "tier": "verified-local",
+      "source": "T32 spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.lobby",
+      "statement": "SK_1061_1061303_Lobby has 646 bones and 19 slots (in-match: 481 / 18); both rebuild and verify.",
+      "tier": "verified-local",
+      "source": "T33 live",
       "date": "2026-11-15"
     }
   ]

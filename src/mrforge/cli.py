@@ -392,6 +392,15 @@ def cmd_mesh(args, out):
         d = X.blend(root, args.force)
     elif a == "fbx":
         d = X.fbx(root)
+    elif a == "build":
+        from .uebuild import build
+        d = build(root, args.game)
+        out.warn(d.pop("warnings"))
+        for pkg, c in d["mesh_checks"].items():
+            for prob in c["problems"]:
+                out.errors.append({"code": "V-MESH", "message": f"{pkg}: {prob}"})
+        out.gaps.append("load tier: mesh mods must be looked at in game (lobby and a match) before they count as working")
+        return d
     elif a == "check":
         d, ok = X.check(root)
         for c in d["checks"]:
@@ -400,7 +409,6 @@ def cmd_mesh(args, out):
                                    "fix": "restore bone names/hierarchy and material slot names/order to vanilla"})
     else:
         raise UsageError(f"unknown mesh action {a}")
-    out.gaps.append("mesh build (Unreal 5.3.2 cook) is not productized yet; see mrforge knowledge mesh-route")
     return d
 
 
@@ -451,8 +459,11 @@ def cmd_undeploy(args, out):
 
 
 def cmd_selftest(args, out):
-    from .selftest import texture
-    d, ok = texture(args.skin, args.texture, args.keep, args.game)
+    from .selftest import mesh, texture
+    if args.route == "mesh":
+        d, ok = mesh(args.skin, args.keep, args.game, args.lobby)
+    else:
+        d, ok = texture(args.skin, args.texture, args.keep, args.game)
     for r in d.get("rules", []):
         if r["status"] == "warn":
             out.warn(f"{r['rule']}: {r['detail']}")
@@ -607,6 +618,7 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--force", action="store_true", help="re-import over an existing .blend")
     xs.add_parser("fbx", description="export the .blend to build/fbx/*.fbx (no leaf bones)")
     xs.add_parser("check", description="bones, hierarchy, material slots and vertex groups must match vanilla")
+    xs.add_parser("build", description="Unreal 5.3.2: import at the vanilla path with placeholders, cook, pack, verify vs vanilla")
     for name, sp in xs.choices.items():
         sp.set_defaults(fn=cmd_mesh, cmdname=f"mesh {name}")
 
@@ -620,7 +632,8 @@ def parser() -> argparse.ArgumentParser:
     s = add("undeploy", cmd_undeploy, "remove a deployed forge mod (receipt-listed files only)")
     s.add_argument("id", nargs="?")
     s = add("selftest", cmd_selftest, "real-toolchain smoke run (no deploy)")
-    s.add_argument("route", choices=["texture"])
+    s.add_argument("route", choices=["texture", "mesh"])
+    s.add_argument("--lobby", action="store_true", help="mesh: also round-trip the lobby mesh")
     s.add_argument("--skin", default="1061303")
     s.add_argument("--texture")
     s.add_argument("--keep", action="store_true")

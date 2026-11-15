@@ -14,9 +14,15 @@
       "exe_sha256": "b620cb65ded4f1415e511fe275146960b7a817072ddb2a781e0eddf3df0e1772",
       "license": "Apache-2.0 / MIT (license files shipped in the release)",
       "platform": "windows",
-      "probe": ["--version"],
+      "probe": [
+        "--version"
+      ],
       "probe_expect": "retoc-rivals-cli 3.11.1",
-      "routes": ["texture", "material", "mesh-build"]
+      "routes": [
+        "texture",
+        "material",
+        "mesh-build"
+      ]
     },
     {
       "name": "uassettool",
@@ -29,9 +35,15 @@
       "exe_sha256": "82283de5621a6d7cabcb698fef4cb9f8c5632a726b09c2010dc64818139c6712",
       "license": "GPL-3.0",
       "platform": "windows",
-      "probe": ["version"],
+      "probe": [
+        "version"
+      ],
       "probe_expect": "UAssetTool v1.5.9",
-      "routes": ["texture", "material", "index"]
+      "routes": [
+        "texture",
+        "material",
+        "index"
+      ]
     },
     {
       "name": "fmodel-mcp",
@@ -45,9 +57,13 @@
       "license": "GPL-3.0",
       "platform": "windows",
       "optional": true,
-      "probe": ["--help"],
+      "probe": [
+        "--help"
+      ],
       "probe_expect": "FModel.Mcp",
-      "routes": ["mesh-export"]
+      "routes": [
+        "mesh-export"
+      ]
     },
     {
       "name": "ueformat-blender",
@@ -62,7 +78,27 @@
       "optional": true,
       "probe": null,
       "probe_expect": null,
-      "routes": ["mesh-export"]
+      "routes": [
+        "mesh-export"
+      ]
+    },
+    {
+      "name": "rivals-mesh-material-manager",
+      "role": "UE 5.3 editor plugin: per-slot MaterialTag user data that UAssetTool injects into FSkeletalMaterial when packing",
+      "repo": "X-zant/RivalsMeshMaterialManager",
+      "tag": "v1.2.0",
+      "asset": "RivalsMeshMaterialManager-1.2.0-Win64.zip",
+      "asset_sha256": "c5b58abfef6914a5b7aa4cee7959a43e49c9d04bca9ad75dd6db8d52f021a49f",
+      "exe": "RivalsMeshMaterialManager/Binaries/Win64/UnrealEditor-RivalsMeshMaterialManager.dll",
+      "exe_sha256": "4534fd963f129adbf23cdd15c813abb4ddf3d0f7762e0ffeea81b58af6b1a303",
+      "license": "Apache-2.0",
+      "platform": "windows",
+      "optional": true,
+      "probe": null,
+      "probe_expect": null,
+      "routes": [
+        "mesh-build"
+      ]
     }
   ]
 }

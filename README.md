@@ -17,7 +17,7 @@ A command-line forge for making **Marvel Rivals skin mods**, built so an AI agen
 ## Requirements
 
 Windows, Python 3.10+, a Steam install of Marvel Rivals, and the ASI loader + UTOC signature bypass for loading
-mods (`mrforge doctor` checks it). Unreal Engine 5.3.2 and Blender 4.2+ are needed only for the planned mesh route.
+mods (`mrforge doctor` checks it). Unreal Engine 5.3.2 and Blender 4.2+ are needed only for the mesh route.
 
 ## Quick start
 
@@ -56,7 +56,7 @@ mrforge deploy           # optional: copies into ~mods\ZZZ-mrforge-red-cat\
 |---|---|---|
 | texture | recolor, retexture, logos, decals, skin tone | v0.1 |
 | material | material instance tints, glow, roughness | v0.1 |
-| mesh | body shape, outfit swap, new geometry (Blender + UE 5.3.2) | planned v0.2 |
+| mesh | body shape, outfit geometry edits (Blender + UE 5.3.2), in-match and lobby meshes | v0.2 |
 | physics | jiggle / cloth tuning | later |
 
 ## Safety

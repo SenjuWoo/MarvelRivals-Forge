@@ -43,7 +43,10 @@ def _rmse(a: Path, b: Path) -> float | None:
 def run(root: Path, game_arg=None, deep: bool = True) -> tuple[dict, bool]:
     root = Path(root)
     m = P.manifest(root)
-    lk = load_lock(root)
+    receipt = load_json(root / "dist" / "receipt.json", {})
+    mesh_route = receipt.get("route") == "mesh"
+    lk = load_lock(root, required=not mesh_route)  # mesh projects have no texture/material extraction
+    lk.setdefault("changelist", receipt.get("changelist") or m.get("game_changelist"))
     res: list[dict] = []
     tr = triple(root, m)
     missing = [p.name for p in tr.values() if not p.is_file()]
@@ -72,7 +75,6 @@ def run(root: Path, game_arg=None, deep: bool = True) -> tuple[dict, bool]:
     res.append(_r("V-LEAK", "fail" if leaks else "pass",
                   f"skeleton/physics/placeholder packages packed: {leaks}" if leaks else "no skeleton, physics or placeholder packages",
                   "static"))
-    receipt = load_json(root / "dist" / "receipt.json", {})
     stale = receipt.get("changelist") != cl
     res.append(_r("V-STALE", "fail" if stale else "pass",
                   f"built for {receipt.get('changelist')}, game is {cl}" if stale else f"built for installed build {cl}", "build"))
@@ -81,6 +83,8 @@ def run(root: Path, game_arg=None, deep: bool = True) -> tuple[dict, bool]:
                   "receipt matches the built files" if out_ok else "dist files differ from receipt.json (rebuild)", "build"))
     if deep:
         res += _roundtrip(root, m, lk, pkgs, groot)
+        if mesh_route:
+            res.append(_mesh_rule(root, groot, utoc, receipt, lk["changelist"]))
     try:
         # The forge's own deploy folders are excluded: redeploying a project is not a conflict.
         mods = [x for x in scan(layout(groot)["mods_dir"]) if "-mrforge-" not in x["folder"]]
@@ -158,6 +162,28 @@ def _roundtrip(root: Path, m: dict, lk: dict, pkgs: list[str], groot: Path) -> l
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     return out
+
+
+def _mesh_rule(root: Path, groot: Path, utoc: Path, receipt: dict, changelist: int) -> dict:
+    """V-MESH: every packed mesh parses with the game's mappings; bones, slot names/order and tags equal vanilla;
+    the lobby mesh is paired with the in-match mesh."""
+    from .uebuild import verify_against_vanilla
+    usmap = require_usmap(changelist)
+    problems, warns, details = [], [], {}
+    pkgs = receipt.get("staged_packages", [])
+    for pkg in pkgs:
+        van = root / "vanilla" / "raw" / pkg
+        if not van.is_file():
+            problems.append(f"{pkg}: vanilla copy missing (rebuild)")
+            continue
+        c = verify_against_vanilla(root, groot, utoc, pkg, van, usmap)
+        details[pkg] = c
+        problems += [f"{Path(pkg).stem}: {p}" for p in c["problems"]]
+    if pkgs and not any(p.endswith("_Lobby.uasset") for p in pkgs):
+        warns.append("lobby mesh not built: hero select shows the vanilla model")
+    st = "fail" if problems else ("warn" if warns else "pass")
+    return {**_r("V-MESH", st, "; ".join(problems + warns) or f"{len(pkgs)} meshes match vanilla bones, slots and tags",
+                 "package"), "meshes": details}
 
 
 def _summary(res: list[dict]) -> dict:

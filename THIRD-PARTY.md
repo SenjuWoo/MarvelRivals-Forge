@@ -18,6 +18,7 @@ conditions of any kind.
 | UAssetTool | https://github.com/X-zant/UAssetToolRivals | GPL-3.0 |
 | fmodel-mcp | https://github.com/MayankS-Code/fmodel-mcp | GPL-3.0 |
 | UEFormat (Blender importer) | https://github.com/h4lfheart/UEFormat | GPL-3.0-or-later |
+| RivalsMeshMaterialManager (UE 5.3 plugin) | https://github.com/X-zant/RivalsMeshMaterialManager | Apache-2.0 |
 
 These run as separate programs; mrforge calls them as subprocesses and does not link to them.
 

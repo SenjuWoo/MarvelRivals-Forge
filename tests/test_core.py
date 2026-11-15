@@ -11,6 +11,7 @@ from pathlib import Path
 
 from helpers import CL, ROOT, ForgeCase, make_game
 
+from mrforge import __version__
 from mrforge.util import ForgeError
 
 
@@ -21,7 +22,7 @@ class CliContract(ForgeCase):
         code, d = self.cli("version")
         self.assertEqual(code, 0)
         self.assertEqual(set(d), {"ok", "command", "version", "data", "errors", "warnings", "gaps"})
-        self.assertEqual(d["data"]["version"], "0.1.0")
+        self.assertEqual(d["data"]["version"], __version__)
 
     def test_usage_error_exit_2(self):
         code, d = self.cli("tex", "hue")
@@ -57,7 +58,7 @@ class CliContract(ForgeCase):
         env = dict(os.environ, PYTHONPATH=str(ROOT / "src"))
         p = subprocess.run([sys.executable, "-m", "mrforge", "version"], cwd=odd, capture_output=True, env=env)
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertEqual(json.loads(p.stdout)["data"]["version"], "0.1.0")
+        self.assertEqual(json.loads(p.stdout)["data"]["version"], __version__)
 
     def test_cmd_launcher_from_awkward_path(self):
         if os.name != "nt":
@@ -68,7 +69,7 @@ class CliContract(ForgeCase):
         p = subprocess.run([str(odd / "mrforge.cmd"), "version"], cwd=odd, capture_output=True,
                            env={k: v for k, v in os.environ.items() if k != "PYTHONPATH"})
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
-        self.assertEqual(json.loads(p.stdout)["data"]["version"], "0.1.0")
+        self.assertEqual(json.loads(p.stdout)["data"]["version"], __version__)
 
 
 class Home(ForgeCase):

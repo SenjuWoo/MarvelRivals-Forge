@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-11-15
+
+Mesh route: body shape and outfit geometry edits through Blender and Unreal Engine 5.3.2, verified against vanilla.
+
+- `mrforge mesh build`: imports the edited mesh in a generated UE 5.3.2 project at the vanilla path, binds it to
+  placeholder skeleton, physics asset, post-process AnimBP and material instances at the vanilla paths, writes the
+  game's per-slot MaterialTag gameplay tags (RivalsMeshMaterialManager), cooks versioned, packs with UAssetTool
+  and reads the mesh back with the game's mappings (bones, slot names/order and tags must equal vanilla).
+- In-match and lobby meshes in one mod; `validate` rule V-MESH; `selftest mesh [--lobby]`.
+- Blender import without sockets/virtual bones (the armature equals the reference skeleton); FBX export renames
+  the armature to `Armature` and gives every slot a unique material named like the game's slot.
+- Pinned RivalsMeshMaterialManager v1.2.0 in `tools.lock.json`; doctor's mesh-build route needs it.
 
 - Mesh route preview: `mrforge mesh export [--lobby]` exports the skin's vanilla mesh through fmodel-mcp from a
   temporary hardlink view of the game containers (installed mods can never leak in), `mesh blend` imports it into

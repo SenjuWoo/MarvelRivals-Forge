@@ -1,6 +1,6 @@
 # STATE
 
-Version: 0.1.0 (texture + material routes)
+Version: 0.2.0 (texture, material and mesh routes)
 Updated: 2026-11-15
 
 ## Goal
@@ -10,27 +10,28 @@ pinned tools, facts from the installed game, build -> validate -> package -> dep
 
 ## Done
 
-- Planning (PLAN.md "Verified ground truth").
-- T01-T27: package, CLI, all v0.1 modules, knowledge, tests (offline, tool shims), docs, installer, CI workflow,
-  release builder. Live runs on the build machine: setup, sync, index, doctor, skin inspect, texture selftest,
-  material route, deploy/undeploy, check-load, install/uninstall. Evidence: PLAN.md task table, VALIDATION.md.
-- UE 5.3.2 is installed now and detected (mesh-build route `available`).
+- v0.1.0 released (T01-T28): texture and material routes; CI green, 0 alerts, published asset re-hashed.
+- v0.2.0 (T30-T33): mesh route through Blender and Unreal Engine 5.3.2 verified at the package tier for skin
+  1061303 (in-match + lobby). Evidence: PLAN.md task table, VALIDATION.md.
+- T29 private part: PROJECTS.md row, SAFE-TOOLS.md verdicts, launcher on PATH.
 
 ## Not done / not verified
 
-- load / gameplay tiers: no forge-built mod has been looked at in game yet (assumptions A1, A3, A5).
-- T28 publish, T29 registration, T30-T34 (v0.2 mesh route, physics).
+- load / gameplay tiers: no forge-built mod has been looked at in game yet. First owner check: deploy the texture
+  selftest mod or a mesh mod, open the hero in the lobby, `mrforge check-load --confirm "<what you saw>"`.
+- T29 bundle part (companion registry + ai-tooling-stack row) lives in the bundle repository; proposed separately.
+- T34 physics route (optional).
 
 ## NEXT ACTION
 
-PLAN.md T28: commit, create the public repository, push, converge CI on the exact SHA, query alerts, tag v0.1.0,
-release with the T27 assets, re-hash the published asset.
+Owner in-game check (A1/A3, mesh load). Then T34 if wanted.
 
 ## Build / run
 
 - Tests: `python tests/run_tests.py`
 - From the checkout: `mrforge.cmd <command>`; installed: `mrforge <command>` (Install.ps1)
 - Release archive: `python tools/build_release.py` -> `artifacts/`
+- Live smoke: `mrforge selftest texture`, `mrforge selftest mesh --lobby`
 
 ## How to resume
 
@@ -39,4 +40,4 @@ release with the T27 assets, re-hash the published asset.
 
 ## Log
 
-- 2026-11-15 planning session; same day build session T01-T27.
+- 2026-11-15 planning session; build session T01-T28 (v0.1.0 released), T30-T33 (v0.2.0).

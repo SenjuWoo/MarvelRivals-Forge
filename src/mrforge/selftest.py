@@ -15,6 +15,45 @@ from .game import find_game, version
 from .util import ForgeError
 
 DEFAULT_SKIN = "1061303"
+
+
+def mesh(skin: str = DEFAULT_SKIN, keep: bool = False, game_arg=None, lobby: bool = False) -> tuple[dict, bool]:
+    """Unmodified round trip through the whole mesh route: export -> blend -> check -> UE build -> validate."""
+    from . import mesh as X
+    from .uebuild import build as ue_build
+    t0 = time.time()
+    steps = []
+    tmp = Path(tempfile.mkdtemp(prefix="mrf-selftest-mesh-"))
+    root = None
+    try:
+        s = resolve_skin(skin)
+        groot, _ = find_game(game_arg)
+        cl = version(groot)["changelist"]
+        root = project.new("Selftest Mesh", s, ["mesh"], cl, out=str(tmp / "selftest-mesh"))
+        r = X.export(root, lobby, game_arg)
+        steps.append({"step": "mesh export", "ok": True, "seconds": r["seconds"]})
+        X.blend(root)
+        steps.append({"step": "mesh blend", "ok": True})
+        c, cok = X.check(root)
+        steps.append({"step": "mesh check", "ok": cok, "checks": c["checks"]})
+        b = ue_build(root, game_arg)
+        bok = all(v["ok"] for v in b["mesh_checks"].values())
+        steps.append({"step": "mesh build", "ok": bok, "seconds": b["seconds"], "checks": b["mesh_checks"]})
+        v, vok = validate.run(root, game_arg)
+        steps.append({"step": "validate", "ok": vok, "tiers": v["tiers"]})
+        p = package.run(root)
+        steps.append({"step": "package", "ok": True, "sha256": p["sha256"]})
+        ok = cok and bok and vok
+        return {"skin": s["skin_id"], "changelist": cl, "tiers": v["tiers"], "rules": v["rules"], "steps": steps,
+                "seconds": round(time.time() - t0, 1), "project": str(root) if keep else "(removed)"}, ok
+    except ForgeError as e:
+        steps.append({"step": "error", "ok": False, **e.as_dict()})
+        return {"steps": steps, "seconds": round(time.time() - t0, 1)}, False
+    finally:
+        if not keep:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 DEFAULT_TEXTURE = "T_{skin}_Body_01_D"
 
 

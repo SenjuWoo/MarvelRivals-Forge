@@ -158,8 +158,10 @@ def route_checks(tool_state: dict, data_state: dict) -> list[dict]:
                 "needs": "fmodel-mcp + ueformat-blender + Blender >= 4.2 + Oodle DLL",
                 "blender": bver or "not on PATH", "release": "v0.2"})
     ue = detect()
-    out.append({"route": "mesh-build", "status": "available" if ue["found"] else "unavailable",
-                "needs": "Unreal Engine 5.3.2", "ue": ue, "release": "v0.2"})
+    mb = ue["found"] and mx and tool_state.get("rivals-mesh-material-manager") and tool_state.get("uassettool")
+    out.append({"route": "mesh-build", "status": "available" if mb else "unavailable",
+                "needs": "mesh-export + Unreal Engine 5.3.2 + rivals-mesh-material-manager + uassettool", "ue": ue,
+                "release": "v0.2"})
     out.append({"route": "physics", "status": "unavailable", "needs": "planned after v0.2", "release": "later"})
     return out
 

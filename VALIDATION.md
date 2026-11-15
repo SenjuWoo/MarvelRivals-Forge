@@ -3,6 +3,19 @@
 Evidence per tier. `static`, `build`, `package` are proven by the forge; `load` and `gameplay` only by an in-game
 look (`mrforge check-load --confirm`). "live" = run on the build machine against the installed game and tools.
 
+## v0.2.0 - 2026-11-15, game build 1.1.4042190 (Season 11.0), Unreal Engine 5.3.2, Blender 5.3.0
+
+| Check | Result | How |
+|---|---|---|
+| Offline suite | pass (all tests) | `python tests/run_tests.py` incl. fake MCP server and reference parsing |
+| `mrforge mesh export --lobby` | pass: both meshes from `pakchunkCharacter` while an installed mod overrides them; no view folder left; 29-46 s | live |
+| `mrforge mesh blend` / `mesh check` | pass: 95,767 vertices, 481 bones, 18 slots; check fails after renaming a slot | live |
+| `mrforge mesh build` | pass: in-match 481 bones / 18 slots, lobby 646 bones / 19 slots; read back from the mod with the game's mappings; slot names, order and all gameplay tags equal vanilla; container holds the 2 meshes only; 116 s | live |
+| `mrforge validate` (mesh project) | static/build/package pass incl. V-MESH; V-CONFLICT warns about the installed body-reshape mod | live |
+| `mrforge selftest mesh --lobby` | exit 0, 208 s | live |
+| Unversioned cook (rejected route) | fail by design: unreadable with the game's mappings; retoc refuses the versioned cook | live spike |
+| load / gameplay | **not_run**: no forge-built mod has been looked at in game yet | owner |
+
 ## v0.1.0 - 2026-11-15, game build 1.1.4042190 (Season 11.0)
 
 | Check | Result | How |
