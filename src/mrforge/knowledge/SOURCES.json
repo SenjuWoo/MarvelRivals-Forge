@@ -1,0 +1,20 @@
+{
+  "sources": [
+    {
+      "file": "skins.json",
+      "upstream": "https://github.com/natimerry/repak-rivals",
+      "path": "repak-gui/src/data/character_data.json",
+      "commit": "01fdcfd14e9d21589eb844ca161cc475df2faa8c",
+      "commit_date": "2026-04-03",
+      "retrieved": "2026-11-15",
+      "license": "Apache-2.0",
+      "transform": "rows reduced to skin_id, hero_id, hero, skin; duplicates dropped"
+    },
+    {
+      "file": "(runtime) .mrforge/cache/usmap",
+      "upstream": "https://github.com/SpaceDepot/rivals-depot",
+      "path": "usmap/, AES.json",
+      "license": "not stated upstream; fetched at runtime, never redistributed"
+    }
+  ]
+}

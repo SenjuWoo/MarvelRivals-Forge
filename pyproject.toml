@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "marvelrivals-forge"
+dynamic = ["version"]
+description = "Agent-facing toolkit for making Marvel Rivals skin mods: extract, edit, build, validate, package, deploy"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "MarvelRivals-Forge contributors"}]
+dependencies = ["Pillow>=10"]
+
+[project.scripts]
+mrforge = "mrforge.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "mrforge.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+mrforge = ["knowledge/*", "blender/*"]

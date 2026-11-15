@@ -1,0 +1,91 @@
+{
+  "routes": [
+    {
+      "id": "texture",
+      "summary": "Edit the skin's textures (colour, decals, logos, skin tone, full repaint) and repack them. No Unreal Editor needed.",
+      "release": "v0.1",
+      "keywords": ["recolor", "recolour", "retexture", "texture", "color", "colour", "hue", "tint", "logo", "decal", "emblem", "paint", "repaint", "skin tone", "pattern", "camo", "darker", "brighter", "red", "blue", "green", "black", "white", "gold", "pink", "purple", "tattoo", "print"],
+      "weak_keywords": ["skin", "outfit color", "suit"],
+      "commands": [
+        "mrforge doctor",
+        "mrforge skin find \"<skin name>\"",
+        "mrforge skin inspect <skinId>",
+        "mrforge new \"<Mod Name>\" --skin <skinId> --kind texture",
+        "cd <project>; mrforge extract --textures \"T_<skinId>_Body_*\"",
+        "mrforge tex list",
+        "mrforge tex hue <texture> --shift 120   (or: tex tint / tex levels / tex overlay / tex replace, each with optional --mask)",
+        "mrforge tex sheet   then open build/preview/sheet.png and look at it",
+        "mrforge build",
+        "mrforge validate",
+        "mrforge package",
+        "mrforge deploy",
+        "mrforge check-load <id>"
+      ],
+      "docs": ["texture-route", "asset-layout", "packaging", "loading-and-anticheat"],
+      "avoid": ["colour ops on _N normal maps (they encode direction, not colour)", "editing a texture shared with another skin id without checking skin inspect", "obfuscate/strip/encrypt options"]
+    },
+    {
+      "id": "material",
+      "summary": "Change material instance parameters (tints, glow strength, roughness, rim colour) without touching textures.",
+      "release": "v0.1",
+      "keywords": ["material", "glow", "emissive", "roughness", "metallic", "shiny", "matte", "parameter", "rim", "fresnel", "intensity", "gloss"],
+      "weak_keywords": ["shine", "brightness"],
+      "commands": [
+        "mrforge doctor",
+        "mrforge skin inspect <skinId>",
+        "mrforge new \"<Mod Name>\" --skin <skinId> --kind material",
+        "cd <project>; mrforge extract --materials",
+        "mrforge mat list [MI_name]",
+        "mrforge mat set <MI_name> <Parameter> <value>   (scalar: 0.5; vector: 1,0.2,0.2,1 or #ff3333)",
+        "mrforge build",
+        "mrforge validate",
+        "mrforge package",
+        "mrforge deploy",
+        "mrforge check-load <id>"
+      ],
+      "docs": ["material-route", "packaging"],
+      "avoid": ["changing texture parameters (swapping which texture a slot uses) - not supported in v0.1"]
+    },
+    {
+      "id": "mesh",
+      "summary": "New geometry: body shape, outfit swap, new model. Export -> Blender -> Unreal 5.3.2 cook -> pack.",
+      "release": "v0.2",
+      "doctor_route": "mesh-build",
+      "keywords": ["mesh", "model", "body shape", "reshape", "outfit swap", "swap outfit", "geometry", "sculpt", "3d", "proportions", "thicc", "thick", "bigger", "smaller", "remove", "nude", "naked", "add accessory", "hair style"],
+      "weak_keywords": ["body", "shape", "outfit"],
+      "commands": [
+        "mrforge doctor   (route mesh-export and mesh-build must be available)",
+        "mrforge skin inspect <skinId>",
+        "mrforge new \"<Mod Name>\" --skin <skinId> --kind mesh",
+        "mrforge mesh export [--lobby]",
+        "mrforge mesh blend   then edit work/mesh/<name>.blend in Blender (keep bone names and material slots)",
+        "mrforge mesh fbx",
+        "mrforge mesh check",
+        "mrforge mesh build",
+        "mrforge validate",
+        "mrforge package",
+        "mrforge deploy"
+      ],
+      "docs": ["mesh-route", "asset-layout"],
+      "avoid": ["renaming or reordering material slots", "renaming bones", "packing the Skeleton or PhysicsAsset placeholders"]
+    },
+    {
+      "id": "physics",
+      "summary": "Jiggle / cloth / hair physics tuning. Not in v0.1; retoc-rivals-cli fix-kawaii-physics is the planned base.",
+      "release": "later",
+      "keywords": ["physics", "jiggle", "bounce", "kawaii", "cloth", "sway", "wobble"],
+      "commands": ["not available yet: see knowledge doc mesh-route for status"],
+      "docs": ["mesh-route"],
+      "avoid": []
+    },
+    {
+      "id": "unsupported",
+      "summary": "Audio, voice lines, UI, maps and gameplay changes are outside this forge (skin mods only).",
+      "release": "none",
+      "keywords": ["audio", "voice", "sound", "music", "ui", "icon", "hud", "map", "gameplay", "damage", "ability", "cooldown", "aimbot", "cheat"],
+      "commands": ["none: this forge makes skin mods only"],
+      "docs": [],
+      "avoid": []
+    }
+  ]
+}

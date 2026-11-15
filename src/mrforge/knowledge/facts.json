@@ -1,0 +1,214 @@
+{
+  "facts": [
+    {
+      "id": "game.version_file",
+      "statement": "MarvelGame/version.json holds `version` and an integer `changelist`; the changelist equals the build number in the mapping file name.",
+      "tier": "verified-local",
+      "source": "installed game",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "game.engine",
+      "statement": "The game runs Unreal Engine 5.3.2; CUE4Parse profile GAME_MarvelRivals.",
+      "tier": "verified-local",
+      "source": "mapping file names + fmodel-mcp",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "game.containers",
+      "statement": "Vanilla content is 39 IoStore containers (global + pakchunk*) in MarvelGame/Marvel/Content/Paks with about 590k packages.",
+      "tier": "verified-local",
+      "source": "UAssetTool extract_iostore_legacy log",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "game.mods_dir",
+      "statement": "Mods load from Paks/~mods, including subfolders; mod managers deploy one folder per mod.",
+      "tier": "verified-local",
+      "source": "installed mods",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "game.loader",
+      "statement": "Mods need the ASI loader (Binaries/Win64/dsound.dll) plus the UTOC signature bypass plugin.",
+      "tier": "verified-local",
+      "source": "installed loader",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "layout.skin_folder",
+      "statement": "Skin assets live in Marvel/Content/Marvel/Characters/<hero 4 digits>/<skin 7 digits>/ with Meshes/, Materials/, Materials/Lobby/, Textures/ and Post_<skin>_Physics / Post_<skin>_Lobby_Physics.",
+      "tier": "verified-local",
+      "source": "list_iostore",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "layout.hero_id",
+      "statement": "A skin id has 7 digits; its first 4 are the hero id.",
+      "tier": "verified-local",
+      "source": "skin table + index",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "layout.shared_textures",
+      "statement": "A skin's materials can reference textures and parent materials of another skin id of the same hero (MI_1061303_Body_01 has parent M_1061001_Skin).",
+      "tier": "verified-local",
+      "source": "UAssetTool to_json",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "layout.vfx_paths",
+      "statement": "Skin VFX meshes and textures live under Marvel/Content/Marvel/VFX/{Meshes,Textures}/Characters/<hero>/<skin>/.",
+      "tier": "verified-local",
+      "source": "list_iostore",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mod.name",
+      "statement": "A mod is three files <Name>_9999999_P.{pak,utoc,ucas}; mount point ../../../.",
+      "tier": "verified-local",
+      "source": "installed mods + retoc info",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mod.flags",
+      "statement": "Community mods show container_flags Compressed|Indexed or Indexed; compression Oodle.",
+      "tier": "verified-local",
+      "source": "retoc info over installed mods",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "anticheat.s11",
+      "statement": "Since Season 11 the anti-cheat reports encrypted, obfuscated and stripped mods; emit plain containers only.",
+      "tier": "upstream-doc",
+      "source": "retoc-rivals-cli 3.11.1 changelog",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "tool.retoc.pack",
+      "statement": "retoc-rivals-cli pack <rawdir> --output <dir> names the output after the input folder and appends _9999999_P; default compression Oodle.",
+      "tier": "verified-local",
+      "source": "retoc --help + test pack",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "tool.uassettool.vanilla",
+      "statement": "UAssetTool extract_iostore_legacy without --mod loads only top-level game containers, so ~mods can never leak into a vanilla base.",
+      "tier": "verified-local",
+      "source": "tool log",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "tool.uassettool.filter",
+      "statement": "extract_iostore_legacy --filter is a substring match: SK_1061_1061303 also matches the _Lobby mesh and _Lobby_Physics.",
+      "tier": "verified-local",
+      "source": "tool log",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "tool.uassettool.abs_paths",
+      "statement": "extract_texture fails with an empty-path error when the output is a bare file name; pass absolute paths.",
+      "tier": "verified-local",
+      "source": "tool run",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "tool.uassettool.oodle",
+      "statement": "UAssetTool downloads oo2core_9_win64.dll next to its exe on the first extraction when it is missing.",
+      "tier": "verified-local",
+      "source": "tool run",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "tool.uassettool.list",
+      "statement": "list_iostore <Paks dir> --filter Characters/ lists ~134k vanilla packages in about 5 s; lines look like `../../../<path>.uasset [.ubulk|no bulk]  (export=N b bulk=N b)`.",
+      "tier": "verified-local",
+      "source": "tool run",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "tex.inject",
+      "statement": "inject_texture keeps the vanilla pixel format and writes the full mip chain (.uasset .uexp .ubulk .uptnl) by default.",
+      "tier": "verified-local",
+      "source": "tool run",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "tex.roundtrip",
+      "statement": "T_1061303_Body_01_D (2048x2048, PF_DXT1, 12 mips) edited, injected, packed and extracted back differs from the edit by RMSE 0.27% (block compression only).",
+      "tier": "verified-local",
+      "source": "planning spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mat.roundtrip",
+      "statement": "UAssetTool to_json -> from_json keeps every parameter of a MaterialInstanceConstant (26/26 on MI_1061303_Body_01); .uexp is byte-identical and an edited vector reads back.",
+      "tier": "verified-local",
+      "source": "T16 spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mat.json_floats",
+      "statement": "UAssetTool JSON writes some zero floats as strings (\"+0\", \"-0\"); readers must accept both.",
+      "tier": "verified-local",
+      "source": "T16 spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.slots",
+      "statement": "SK_1061_1061303 has 18 material slots; slots carry MaterialTag.* gameplay tags that must survive a mesh rebuild.",
+      "tier": "verified-local",
+      "source": "skeletal_mesh_info",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.fmodel",
+      "statement": "fmodel-mcp exports SK_1061_1061303 as .uemodel + material JSON + PNG in about 17 s; with an override mod deployed it exports the mod's version.",
+      "tier": "verified-local",
+      "source": "planning spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.blender",
+      "statement": "Blender 5.3 imports .uemodel headless through ueformat-blender without installing the add-on: 81,410 vertices, 18 materials, 488 bones.",
+      "tier": "verified-local",
+      "source": "planning spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "mesh.loose_folder",
+      "statement": "Opening a folder of loose legacy packages in fmodel-mcp mounts but mesh conversion fails; do not use loose folders as a vanilla source.",
+      "tier": "verified-local",
+      "source": "planning spike",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "data.usmap",
+      "statement": "Mappings come from SpaceDepot/rivals-depot usmap/ named 5.3.2-<build>+++depot_marvel+S<season>_release-Marvel.usmap.",
+      "tier": "verified-local",
+      "source": "GitHub contents API",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "data.catalog",
+      "statement": "The hero/skin name table is a snapshot of repak-rivals character_data.json (April 2026); newer skins appear in the index without names.",
+      "tier": "verified-local",
+      "source": "upstream commit",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "load.order",
+      "statement": "Among mods providing the same package, the later-sorted folder is assumed to win.",
+      "tier": "reported",
+      "source": "community practice; unverified (assumption A3)",
+      "date": "2026-11-15"
+    },
+    {
+      "id": "load.resolution",
+      "statement": "Textures injected at a different resolution than vanilla are assumed to load.",
+      "tier": "reported",
+      "source": "unverified (assumption A5); tex replace resizes to vanilla dims by default",
+      "date": "2026-11-15"
+    }
+  ]
+}

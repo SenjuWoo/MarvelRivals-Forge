@@ -1,0 +1,24 @@
+# DECISIONS
+
+Decisions made while planning (D1-D14) and building (D15+). Newest last.
+
+| # | Chosen | Rejected | Why |
+|---|---|---|---|
+| D1 | Python CLI `mrforge` (stdlib + Pillow), same shape as the newest sibling forge | Rust/C# CLI; MCP-first forge | Matches the owner's forge standard and existing forges; the heavy lifting is already in upstream binaries; CLI + JSON works in a cold session |
+| D2 | Tools pinned in `tools.lock.json` with hashes and fetched by `mrforge setup` into `.mrforge/tools/` | Committing tool binaries to the repository; relying on PATH | Upstream tools change with every game season (three releases in three weeks); a lock gives reproducibility without a 100+ MB history and makes updates one reviewed diff. `--from` adopts copies already on disk, so nothing is downloaded twice |
+| D3 | Default route is editor-free: texture and material edits via UAssetTool + retoc | Making every skin mod go through Unreal Editor | Proven end to end today in seconds, fully scriptable, no 40+ GB dependency. It covers recolours, retextures, decals, skin-tone and material-parameter mods |
+| D4 | retoc-rivals-cli is the packer; UAssetTool is the extractor/editor | UAssetTool `create_mod_iostore` as packer; repak-gui | retoc is the community's reference packer, has the KawaiiPhysics and hidden-material fixes and a `.sha256` per release. UAssetTool stays as the fallback packer if a retoc release breaks |
+| D5 | Vanilla assets always come from `UAssetTool extract_iostore_legacy` without `--mod` | Reading through fmodel-mcp for textures; unpacking installed mods as a base | It ignores `~mods` by design, so a deployed mod can never leak into a new mod's base |
+| D6 | Mesh export uses fmodel-mcp driven over stdio by a small built-in client, with a temporary hardlink vanilla view only when a mod overrides the target | Own CUE4Parse exporter; loose-folder conversion; asking the owner to disable mods | fmodel-mcp already works on this game and build; a custom exporter is a second compiled component to maintain (kept as the escalation path); loose folders fail (tested) |
+| D7 | Mesh build goes through Unreal Engine 5.3.2 headless (Python import + cook) and ships in v0.2 behind a spike | Shipping mesh support unverified in v0.1; binary patching of cooked skeletal meshes | UE 5.3.2 is not installed, so nothing about that leg can be verified today; no existing tool injects geometry into cooked meshes |
+| D8 | Plain output only: no obfuscation, encryption or stripping, and `validate` fails on an encrypted container | Exposing retoc's `--obfuscate` / `--strip` | Since Season 11 the game reports such mods (upstream changelog) |
+| D9 | The forge never installs or updates the loader/bypass; `doctor` detects and reports it | Bundling the ASI loader | It is distributed through the mod site and managed by the owner's mod manager; it is already installed |
+| D10 | `deploy` copies into its own `ZZZ-mrforge-<id>` folder in `~mods` with a receipt; `package` makes a zip the mod manager can import | Writing into the mod manager's staging; editing its load-order file | Keeps the mod manager's state untouched and makes undeploy exact |
+| D11 | Hero/skin table is a vendored snapshot with provenance plus an installed-truth index built from the game | Hand-written table; scraping a wiki | The snapshot gives names; the index gives what really exists in this build, and wins on conflict |
+| D12 | Usmap must match the installed changelist exactly by default | Always taking the newest mapping | A wrong mapping reads unversioned properties wrongly without an error |
+| D13 | Machine paths live in ignored `LOCAL.md`; tracked files stay publishable | Paths in PLAN/STATE | The repository is public |
+| D14 | Releases: v0.1.0 = texture + material routes; v0.2.0 = mesh; physics after that | One big release | Value ships as soon as the verified route is productized; the unverified leg cannot delay it |
+| D15 | Setting a zero-valued material colour adds the value and drops the captured unversioned struct header | Keeping UAssetTool's `OriginalStructHeader` | Tested 2026-11-15: with the header kept, from_json writes a corrupt asset; without it the value reads back |
+| D16 | `mrforge setup --from` copies a hash-matching tool folder into `.mrforge/tools/<name>/<tag>/` | Running tools in place from the source folder | The source collection stays read-only (UAssetTool writes the Oodle DLL next to itself) and the forge owns what it runs |
+| D17 | The vanilla index lists every package whose path contains `Characters/` (incl. VFX/.../Characters) | Only `Marvel/Characters/` | Skin VFX meshes and textures live under `VFX/*/Characters/<hero>/<skin>/`; V-PATHS must accept them |
+| D18 | Mod zip holds the triple inside a `<PakName>/` folder | Triple at the zip root | Keeps the three files together for mod managers that extract into one folder per archive |

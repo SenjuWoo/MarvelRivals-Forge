@@ -1,0 +1,46 @@
+{
+  "signatures": [
+    {
+      "id": "PAK_MOUNT_FAILED",
+      "pattern": "(?i)(failed to mount|unable to mount|mount failed).*_P\\.(pak|utoc)",
+      "tier": "reported",
+      "meaning": "the game refused a mod container",
+      "fix": "rebuild with mrforge build; check the ASI loader + signature bypass with mrforge doctor"
+    },
+    {
+      "id": "SIGNATURE_CHECK",
+      "pattern": "(?i)signature.*(fail|mismatch|invalid)",
+      "tier": "reported",
+      "meaning": "container signature check failed: the UTOC signature bypass is missing or outdated",
+      "fix": "update the signature bypass through your mod manager"
+    },
+    {
+      "id": "PACKAGE_MISSING",
+      "pattern": "(?i)couldn'?t find (file|package).*/Game/Marvel/Characters/",
+      "tier": "reported",
+      "meaning": "a package the mod references is missing",
+      "fix": "mrforge validate (V-PATHS); keep vanilla paths"
+    },
+    {
+      "id": "CORRUPT_PACKAGE",
+      "pattern": "(?i)(corrupt|serial size mismatch|bad export|invalid package)",
+      "tier": "reported",
+      "meaning": "a cooked asset did not deserialize",
+      "fix": "rebuild against the exact usmap (mrforge sync) and the current game build"
+    },
+    {
+      "id": "FATAL",
+      "pattern": "(?i)(fatal error|assertion failed|unhandled exception)",
+      "tier": "reported",
+      "meaning": "the game crashed",
+      "fix": "mrforge undeploy, confirm the game starts, then deploy again one mod at a time"
+    },
+    {
+      "id": "ANTICHEAT_FLAG",
+      "pattern": "(?i)anti.?cheat.*(violation|detected|report)",
+      "tier": "reported",
+      "meaning": "anti-cheat reported something",
+      "fix": "remove encrypted/obfuscated/stripped mods (mrforge doctor lists them)"
+    }
+  ]
+}

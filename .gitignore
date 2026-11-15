@@ -1,0 +1,11 @@
+LOCAL.md
+.venv/
+.mrforge/
+projects/
+artifacts/
+build/
+dist/
+__pycache__/
+*.egg-info/
+*.log
+.pytest_cache/

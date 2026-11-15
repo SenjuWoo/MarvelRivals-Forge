@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "updated": "2026-11-15",
+  "game_build": "1.1.4042190 (Season 11.0)",
+  "tools": [
+    {
+      "name": "retoc-rivals-cli",
+      "role": "IoStore packer and inspector (pack, info, manifest)",
+      "repo": "natimerry/repak-rivals",
+      "tag": "v3.11.1",
+      "asset": "retoc-rivals-cli-x86_64-pc-windows-msvc.zip",
+      "asset_sha256": "4d4f06db77b12f53000f082f324ac6e40f47b4f08e126029d70c56e8eaeb12a4",
+      "exe": "retoc-rivals-cli.exe",
+      "exe_sha256": "b620cb65ded4f1415e511fe275146960b7a817072ddb2a781e0eddf3df0e1772",
+      "license": "Apache-2.0 / MIT (license files shipped in the release)",
+      "platform": "windows",
+      "probe": ["--version"],
+      "probe_expect": "retoc-rivals-cli 3.11.1",
+      "routes": ["texture", "material", "mesh-build"]
+    },
+    {
+      "name": "uassettool",
+      "role": "Vanilla extraction, texture extract/inject, asset JSON, mesh info",
+      "repo": "X-zant/UAssetToolRivals",
+      "tag": "v1.5.9",
+      "asset": "UAssetTool-win-x64.zip",
+      "asset_sha256": "8cab298bb57d50a1ef62f03d4bb0996fb0a0d3302e81a5b7925f36673623f33f",
+      "exe": "UAssetTool.exe",
+      "exe_sha256": "82283de5621a6d7cabcb698fef4cb9f8c5632a726b09c2010dc64818139c6712",
+      "license": "GPL-3.0",
+      "platform": "windows",
+      "probe": ["version"],
+      "probe_expect": "UAssetTool v1.5.9",
+      "routes": ["texture", "material", "index"]
+    },
+    {
+      "name": "fmodel-mcp",
+      "role": "Mesh export (stdio MCP server over CUE4Parse)",
+      "repo": "MayankS-Code/fmodel-mcp",
+      "tag": "v1.2.0",
+      "asset": "fmodel-mcp-1.2.0-win-x64.zip",
+      "asset_sha256": "62aa915fb65d3db13d47e244576048a72f236c62d27a055d6505fa553dfbfd02",
+      "exe": "FModel.Mcp.exe",
+      "exe_sha256": "3cebb4ffb590224d491afd45d59b82afdc7f21939ed9f0faae148a4fd6f9bbd3",
+      "license": "GPL-3.0",
+      "platform": "windows",
+      "optional": true,
+      "probe": ["--help"],
+      "probe_expect": "FModel.Mcp",
+      "routes": ["mesh-export"]
+    },
+    {
+      "name": "ueformat-blender",
+      "role": "Blender importer for .uemodel (used headless, never installed into Blender)",
+      "repo": "h4lfheart/UEFormat",
+      "tag": "v10",
+      "asset": "ueformat-blender.zip",
+      "asset_sha256": "41d464da5278e5079311bd1be22ef9358cc7b280f07b81c648e298be9fae3cee",
+      "exe": "io_scene_ueformat/__init__.py",
+      "exe_sha256": "6c975bf028688b1b54c989845694c99ce50cd393f7c283621f47756aeaf81f02",
+      "license": "GPL-3.0-or-later",
+      "optional": true,
+      "probe": null,
+      "probe_expect": null,
+      "routes": ["mesh-export"]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "kinds": [
+    {"suffix": "_D", "kind": "color", "colour_ops": "allowed", "note": "base colour (albedo); alpha may carry a mask"},
+    {"suffix": "_N", "kind": "normal", "colour_ops": "refused", "note": "tangent-space normal map; colour ops corrupt lighting. Use --force only for replace with a real normal map"},
+    {"suffix": "_ORM", "kind": "packed", "colour_ops": "warn", "note": "R=occlusion G=roughness B=metallic; hue/tint mixes channels"},
+    {"suffix": "_S", "kind": "packed", "colour_ops": "warn", "note": "specular / masks packed per channel"},
+    {"suffix": "_M", "kind": "packed", "colour_ops": "warn", "note": "mask texture, channels select material regions"},
+    {"suffix": "_E", "kind": "color", "colour_ops": "allowed", "note": "emissive colour"}
+  ],
+  "default": {"kind": "unknown", "colour_ops": "warn", "note": "unknown suffix; check the material that uses it"}
+}
