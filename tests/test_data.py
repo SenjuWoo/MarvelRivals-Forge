@@ -65,7 +65,9 @@ class Knowledge(ForgeCase):
             "more cloth sway on the skirt physics": "physics",
             "make her boobs bounce": "physics",
             "softer hair physics": "physics",
-            "replace voice lines": "unsupported",
+            "replace voice lines": "sound",
+            "custom gunshot sound for the primary fire": "sound",
+            "new hud icon": "unsupported",
             "change ability cooldown": "unsupported",
         }
         bad = {req: plan(req)["route"] for req, want in table.items() if plan(req)["route"] != want}
@@ -178,7 +180,7 @@ class Project(ForgeCase):
         with self.assertRaises(ForgeError):
             P.new("Red Cat: v2", skin, ["texture"], CL, out=str(root))
         with self.assertRaises(ForgeError):
-            P.new("x", skin, ["sound"], CL, out=str(self.tmp / "q"))
+            P.new("x", skin, ["animation"], CL, out=str(self.tmp / "q"))
 
 
 class Doctor(ForgeCase):

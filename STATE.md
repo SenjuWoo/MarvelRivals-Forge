@@ -1,6 +1,6 @@
 # STATE
 
-Version: 1.1.0 (lobby spring jiggle built headless in UE 5.3.2; chest jiggle confirmed in game)
+Version: 1.2.0 (sound route without Wwise; v1.2.0 tag held until the owner hears the test sound)
 Updated: 2026-11-25
 Last known-good release: v1.1.0 (tag on 80a3ecf, CI green, published asset re-hashed)
 
@@ -33,16 +33,20 @@ pinned tools, facts from the installed game, build -> validate -> package -> dep
   chest|butt|thighs` and the SPRING_BONE_UNWEIGHTED guard; test mod rebuilt with 12 lobby springs (chest, butt,
   thighs; the rig has no belly bone) and in-match chains on chest + butt; validate all pass; redeployed. Released
   as v1.1.0.
+- v1.2.0 (T46-T47): sound route (`extract --sounds`, `sound list/replace/reset`, in-place PCM media in the skin's
+  Wwise banks, HIRC untouched, V-SND, bank V-CONFLICT, pak-only sound mods). Test mod gets a three-tone beep on
+  primary fire (left_release1..3) and the hero-select hover sound.
 
 ## Not done / not verified
 
-- In game: butt/thigh springs (12-spring build) and the in-match chains (practice range) not yet looked at.
+- In game: the test beep (hero select hover; practice range primary fire), butt/thigh springs and the in-match
+  chains not yet heard/seen. Tag/release v1.2.0 only after the beep is heard.
 - T29 bundle part (companion registry + ai-tooling-stack row) lives in the bundle repository.
 
 ## NEXT ACTION
 
-Optional owner look at butt/thigh jiggle (hero select) and the in-match chains (practice range):
-`mrforge check-load forge-v1-test --confirm "<what you saw>"`.
+Owner listens: hover the 1061303 skin in hero select (beep instead of the hover sound), fire in the practice range
+(beep on every primary shot). Then `mrforge check-load forge-v1-test --confirm "<what you heard>"` and tag v1.2.0 (T48).
 
 ## Build / run
 
@@ -65,3 +69,4 @@ Optional owner look at butt/thigh jiggle (hero select) and the in-match chains (
 - 2026-11-25 owner in-game look: mesh deformed -> v1.0.1 (root-bone scale + normals fixed, V-MESH bind pose).
 - 2026-11-25 owner: mesh/texture OK in game, no lobby jiggle -> v1.1.0 lobby springs (UE headless, own plugin).
 - 2026-11-25 owner: lobby chest jiggle works -> regions (butt, thighs), weight guard, v1.1.0 released.
+- 2026-11-25 owner: sounds the RoR2 way (no Wwise download) -> v1.2.0 sound route (in-place PCM bank media).

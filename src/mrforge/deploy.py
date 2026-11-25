@@ -10,7 +10,7 @@ import time
 from pathlib import Path
 
 from . import project as P
-from .build import triple
+from .build import built_files
 from .game import find_game, game_running, layout
 from .home import config, home
 from .util import ForgeError, load_json, save_json, sha256_file
@@ -27,7 +27,7 @@ def folder_name(prefix: str, mod_id: str) -> str:
 def deploy(root: Path, prefix: str | None = None, game_arg=None, running=None) -> dict:
     root = Path(root)
     m = P.manifest(root)
-    tr = triple(root, m)
+    tr = built_files(root, m)
     missing = [p.name for p in tr.values() if not p.is_file()]
     if missing:
         raise ForgeError("NOT_BUILT", f"missing {missing}", "mrforge build && mrforge validate")
@@ -42,6 +42,10 @@ def deploy(root: Path, prefix: str | None = None, game_arg=None, running=None) -
         undeploy(m["id"], running=False)
     dest = mods_dir / folder_name(prefix, m["id"])
     dest.mkdir(parents=True, exist_ok=True)
+    keep = {p.name for p in tr.values()}
+    for old_file in dest.glob(f"{m['pak_name']}_9999999_P.*"):
+        if old_file.name not in keep:  # a container shape change (IoStore <-> pak-only) leaves no stale file behind
+            old_file.unlink()
     files = []
     for p in tr.values():
         target = dest / p.name

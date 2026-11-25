@@ -211,14 +211,51 @@
       ]
     },
     {
-      "id": "unsupported",
-      "summary": "Audio, voice lines, UI, maps and gameplay changes are outside this forge (skin mods only).",
-      "release": "none",
+      "id": "sound",
+      "summary": "Replace a skin's sounds (weapon and ability SFX, hero-select and MVP sounds) with your own audio: the skin's Wwise banks get PCM media in place. No Wwise or Unreal install.",
+      "release": "v1.2",
       "keywords": [
+        "sound",
+        "sounds",
+        "sfx",
         "audio",
         "voice",
-        "sound",
+        "voiceline",
+        "voice line",
         "music",
+        "noise",
+        "beep",
+        "shot sound",
+        "gunshot",
+        "reload sound",
+        "hit sound"
+      ],
+      "commands": [
+        "mrforge doctor   (route sound: uassettool + AES key; ffmpeg for mp3/ogg)",
+        "mrforge new \"<Mod Name>\" --skin <skinId> --kind sound",
+        "cd <project>; mrforge extract --sounds   (bnk_sfx_<skin> + bnk_display_<skin>; --bank <name> for others)",
+        "mrforge sound list \"*left*\"   (events: left/right = primary/secondary fire, e/q/shift/f = abilities, display_* = hero select)",
+        "mrforge sound replace <event> <file.wav|mp3|ogg> [--gain -3] [--keep-layers]",
+        "mrforge build",
+        "mrforge validate",
+        "mrforge package",
+        "mrforge deploy",
+        "mrforge check-load <id>"
+      ],
+      "docs": [
+        "sound-route"
+      ],
+      "avoid": [
+        "voice banks (bnk_vo_<hero>001) unless every skin of the hero should change",
+        "sounds longer than 30 s (bank media sit in memory)",
+        "two mods carrying the same bank (only one loads)"
+      ]
+    },
+    {
+      "id": "unsupported",
+      "summary": "UI, maps and gameplay changes are outside this forge (skin mods only).",
+      "release": "none",
+      "keywords": [
         "ui",
         "icon",
         "hud",

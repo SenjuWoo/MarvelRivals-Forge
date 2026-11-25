@@ -13,7 +13,7 @@ from . import index as I
 from . import mat as M
 from . import phys as PH
 from . import project as P
-from .build import triple
+from .build import built_files, triple
 from .extract import load_lock
 from .game import find_game, layout, version
 from .mods import conflicts, parse_filters, parse_info, scan
@@ -46,15 +46,19 @@ def run(root: Path, game_arg=None, deep: bool = True) -> tuple[dict, bool]:
     m = P.manifest(root)
     receipt = load_json(root / "dist" / "receipt.json", {})
     mesh_route = receipt.get("route") == "mesh" or "mesh" in receipt.get("routes", [])
-    lk = load_lock(root, required=not mesh_route)  # mesh projects have no texture/material extraction
+    sound_route = "sound" in receipt.get("routes", [])
+    lk = load_lock(root, required=not (mesh_route or sound_route))  # mesh and sound projects may have no lock
     lk.setdefault("changelist", receipt.get("changelist") or m.get("game_changelist"))
     res: list[dict] = []
-    tr = triple(root, m)
+    tr = built_files(root, m)
     missing = [p.name for p in tr.values() if not p.is_file()]
+    shape = "pak" if len(tr) == 1 else "{pak,utoc,ucas}"
     res.append(_r("V-NAME", "fail" if missing else "pass",
-                  f"missing {missing}" if missing else f"{m['pak_name']}_9999999_P.{{pak,utoc,ucas}}", "static"))
+                  f"missing {missing}" if missing else f"{m['pak_name']}_9999999_P.{shape}", "static"))
     if missing:
         return _summary(res), False
+    if len(tr) == 1:
+        return _pak_only(root, m, receipt, tr[".pak"], game_arg, res)
     utoc = tr[".utoc"]
     info = run_tool("retoc-rivals-cli", ["info", fwd(utoc)], timeout=120)
     pi = parse_info(info["stdout"] + info["stderr"])
@@ -87,12 +91,63 @@ def run(root: Path, game_arg=None, deep: bool = True) -> tuple[dict, bool]:
         res += _roundtrip(root, m, lk, pkgs, groot)
         if mesh_route:
             res.append(_mesh_rule(root, groot, utoc, receipt, lk["changelist"]))
+        if "sound" in receipt.get("routes", []):
+            res.append(_sound_rule(root, tr[".pak"]))
     try:
         # The forge's own deploy folders are excluded: redeploying a project is not a conflict.
         mods = [x for x in scan(layout(groot)["mods_dir"]) if "-mrforge-" not in x["folder"]]
         cf = conflicts(mods, pkgs)
         res.append(_r("V-CONFLICT", "warn" if cf else "pass",
                       f"deployed mods also provide: {cf[:5]}" if cf else "no deployed mod touches these packages", "static"))
+    except Exception as e:  # conflict scan is advisory
+        res.append(_r("V-CONFLICT", "skip", f"mods scan failed: {e}", "static"))
+    if "sound" in receipt.get("routes", []):
+        try:
+            res.append(_sound_conflicts(root, groot))
+        except Exception as e:
+            res.append(_r("V-CONFLICT", "skip", f"sound bank scan failed: {e}", "static"))
+    ok = not any(r["status"] == "fail" for r in res)
+    return _summary(res), ok
+
+
+def _sound_rule(root: Path, pak: Path) -> dict:
+    from . import snd as SN
+    probs = SN.verify_pak(root, pak)
+    n = len(SN.changed(root))
+    return _r("V-SND", "fail" if probs else "pass",
+              "; ".join(probs[:6]) if probs else f"{n} sound bank(s) read back from the mod: game's HIRC and untouched "
+              "media kept, replaced media equal the new sounds", "package")
+
+
+def _sound_conflicts(root: Path, groot: Path) -> dict:
+    """Since the September 2026 update the game loads one copy of a bank: another mod carrying it is a conflict."""
+    from . import snd as SN
+    mine = {f"{r.lower()}" for r in SN.changed(root)}
+    hits = []
+    for pak in sorted(layout(groot)["mods_dir"].rglob("*.pak")):
+        if "-mrforge-" in str(pak.parent):
+            continue
+        both = sorted(mine & set(SN.mod_banks(pak)))
+        if both:
+            hits.append(f"{pak.parent.name}/{pak.name}: {both[:3]}")
+    return _r("V-CONFLICT", "warn" if hits else "pass",
+              f"deployed mods also carry these sound banks (only one loads): {hits[:5]}" if hits
+              else "no deployed mod carries these sound banks", "static")
+
+
+def _pak_only(root: Path, m: dict, receipt: dict, pak: Path, game_arg, res: list) -> tuple[dict, bool]:
+    """A sound-only mod: one legacy .pak with the edited banks (decision D32)."""
+    groot, _ = find_game(game_arg)
+    cl = version(groot)["changelist"]
+    stale = receipt.get("changelist") != cl
+    res.append(_r("V-STALE", "fail" if stale else "pass",
+                  f"built for {receipt.get('changelist')}, game is {cl}" if stale else f"built for installed build {cl}", "build"))
+    out_ok = bool(receipt) and receipt.get("outputs", {}).get(pak.name) == sha256_file(pak)
+    res.append(_r("V-RECEIPT", "pass" if out_ok else "fail",
+                  "receipt matches the built files" if out_ok else "dist files differ from receipt.json (rebuild)", "build"))
+    res.append(_sound_rule(root, pak))
+    try:
+        res.append(_sound_conflicts(root, groot))
     except Exception as e:  # conflict scan is advisory
         res.append(_r("V-CONFLICT", "skip", f"mods scan failed: {e}", "static"))
     ok = not any(r["status"] == "fail" for r in res)

@@ -45,7 +45,7 @@ def _score(request: str, route: dict) -> int:
     return score
 
 
-KINDS_ROUTES = ("texture", "material", "mesh", "physics")
+KINDS_ROUTES = ("texture", "material", "mesh", "physics", "sound")
 
 
 def plan(request: str, route_status: dict | None = None) -> dict:

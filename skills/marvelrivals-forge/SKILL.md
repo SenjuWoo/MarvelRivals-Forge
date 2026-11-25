@@ -1,10 +1,10 @@
 ---
 name: marvelrivals-forge
-description: Make, check, package and deploy Marvel Rivals skin mods (recolors, retextures, logos, skin tone, material tints and glow, body-shape and outfit mesh edits, jiggle/hair/cloth physics) with the mrforge CLI. Use for any Marvel Rivals mod, .pak/.utoc/.ucas, ~mods, skin id, texture, material, mesh or physics edit request.
-version: 1.1.0
+description: Make, check, package and deploy Marvel Rivals skin mods (recolors, retextures, logos, skin tone, material tints and glow, body-shape and outfit mesh edits, jiggle/hair/cloth physics, custom weapon/ability/hero-select sounds) with the mrforge CLI. Use for any Marvel Rivals mod, .pak/.utoc/.ucas, ~mods, skin id, texture, material, mesh, physics or sound edit request.
+version: 1.2.0
 ---
 
-# MarvelRivals-Forge (mrforge 1.1.0)
+# MarvelRivals-Forge (mrforge 1.2.0)
 
 Every command prints JSON `{ok, data, errors[{code,message,fix}], warnings, gaps}`; exit 0/1/2 (usage)/3
 (environment). Follow `errors[].fix`. If `mrforge` is not on PATH, run `mrforge.cmd` from the forge folder.
@@ -42,6 +42,12 @@ Every command prints JSON `{ok, data, errors[{code,message,fix}], warnings, gaps
   The build rebuilds the vanilla lobby blueprint in Unreal 5.3.2 plus spring-bone nodes (needs the
   `physics-lobby` doctor route: VS 2022 MSVC v143). One asset takes either chains or springs, not both.
 - The female body rig has no belly bone. The build refuses spring bones the skeleton lacks or that move no skin.
+
+## Sounds (no Wwise)
+`mrforge extract --sounds`, `mrforge sound list "*left*"` (left/right = primary/secondary fire, e/q/shift/f =
+abilities, display_* = hero select), `mrforge sound replace <event> <file.wav|mp3|ogg> [--gain -3]`, then build.
+Every variation gets the sound, stacked layers get 10 ms of silence. Voice lines are hero-wide (`--bank
+bnk_vo_<hero>001`): every skin of the hero changes. Heard only in game: deploy, then check-load --confirm.
 
 ## Do not
 - edit files under the game folder or `~mods` yourself; `deploy`/`undeploy` do it with receipts.

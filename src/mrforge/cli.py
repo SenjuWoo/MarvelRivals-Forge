@@ -300,7 +300,8 @@ def cmd_new(args, out):
         out.warn(f"game not found ({e.code}); game_changelist will be set by mrforge extract")
     kinds = [k.strip() for k in args.kind.split(",") if k.strip()]
     root = new(args.name, s, kinds, cl, args.out, args.description or "")
-    first = {"mesh": "mrforge mesh export --lobby", "physics": "mrforge extract --physics"}.get(
+    first = {"mesh": "mrforge mesh export --lobby", "physics": "mrforge extract --physics",
+             "sound": "mrforge extract --sounds"}.get(
         kinds[0] if kinds else "", f"mrforge extract --textures \"T_{s['skin_id']}_*\"")
     return {"project": str(root), "skin": s, "next": f"cd \"{root}\" && {first}"}
 
@@ -312,12 +313,46 @@ def cmd_bump(args, out):
 
 def cmd_extract(args, out):
     from .extract import run
-    if not (args.textures or args.materials or args.all or args.package or args.physics):
+    sounds = args.sounds or args.bank
+    if not (args.textures or args.materials or args.all or args.package or args.physics or sounds):
         raise UsageError("choose what to extract",
-                         "--textures \"<glob>\" and/or --materials, --physics, --all, --package <path>")
-    d = run(_project(args), args.textures, args.materials, args.all, args.package, args.vfx, args.game, args.physics)
-    out.warn(d.pop("warnings"))
+                         "--textures \"<glob>\" and/or --materials, --physics, --sounds, --all, --package <path>")
+    root = _project(args)
+    d = {}
+    if args.textures or args.materials or args.all or args.package or args.physics:
+        d = run(root, args.textures, args.materials, args.all, args.package, args.vfx, args.game, args.physics)
+        out.warn(d.pop("warnings"))
+    if sounds:
+        from . import snd as SN
+        from .project import manifest
+        groot, _, ver = _game_info(args)
+        s = SN.extract_banks(root, groot, ver["changelist"], manifest(root)["skin_id"], args.bank)
+        out.warn(s.pop("warnings"))
+        d["sounds"] = s["banks"]
+        d.setdefault("next", "mrforge sound list, then mrforge sound replace <event> <file.wav|mp3|ogg>")
     return d
+
+
+def cmd_sound(args, out):
+    from . import snd as SN
+    root = _project(args)
+    a = args.action
+    if a == "list":
+        rows = SN.listing(root, args.event)
+        return {"events": rows, "count": len(rows),
+                "note": "left/right = primary/secondary fire, e/q/shift/f = abilities, display_* = hero select and MVP"}
+    if a == "replace":
+        if bool(args.event) == (args.media is not None):
+            raise UsageError("give an event name or --media <id>", "mrforge sound list")
+        d = SN.replace(root, args.event, Path(args.file), args.media, args.keep_layers, args.gain)
+        if d["shared_with"]:
+            out.warn(f"these events play the same media and change too: {d['shared_with'][:8]}")
+        out.gaps.append("sound is proven only by hearing it in game (mrforge deploy, then check-load --confirm)")
+        d["next"] = "mrforge build, then mrforge validate"
+        return d
+    if a == "reset":
+        return {"reset": SN.reset(root, args.target)}
+    raise UsageError(f"unknown sound action {a}")
 
 
 def cmd_tex(args, out):
@@ -629,7 +664,7 @@ def parser() -> argparse.ArgumentParser:
     s = add("new", cmd_new, "create a mod project")
     s.add_argument("name")
     s.add_argument("--skin", required=True, help="7-digit skin id or skin name")
-    s.add_argument("--kind", default="texture", help="any of texture,material,mesh,physics (comma-separated)")
+    s.add_argument("--kind", default="texture", help="any of texture,material,mesh,physics,sound (comma-separated)")
     s.add_argument("--out", help="project folder (default <projects root>/<slug>)")
     s.add_argument("--description", help="text for README.txt in the package")
     s = add("bump", cmd_bump, "bump the project version and add a changelog entry")
@@ -643,6 +678,9 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--vfx", action="store_true", help="include VFX folders")
     s.add_argument("--physics", action="store_true",
                    help="the skin's post-process AnimBlueprints (Post_<skin>_Physics and _Lobby_Physics)")
+    s.add_argument("--sounds", action="store_true",
+                   help="the skin's sound banks (bnk_sfx_<skin>, bnk_display_<skin>) with their events")
+    s.add_argument("--bank", action="append", help="another sound bank by name, e.g. bnk_vo_1061001 (repeatable)")
 
     s = add("tex", cmd_tex, "texture edits (recorded ops, re-applied on build)")
     ts = s.add_subparsers(dest="action", required=True, parser_class=Parser)
@@ -694,6 +732,22 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("material")
     for name, sp in ms.choices.items():
         sp.set_defaults(fn=cmd_mat, cmdname=f"mat {name}")
+
+    s = add("sound", cmd_sound, "sound route: replace the skin's sounds with your own audio (no Wwise needed)")
+    ss = s.add_subparsers(dest="action", required=True, parser_class=Parser)
+    t = ss.add_parser("list", description="events of the extracted banks with their media (variations, layers)")
+    t.add_argument("event", nargs="?", help="glob over event names, e.g. \"*left*\"")
+    t = ss.add_parser("replace", description="replace an event's sound (every variation) with any audio file ffmpeg reads")
+    t.add_argument("event", nargs="?", help="event name from sound list, e.g. sfx_1061303_left_release2_play")
+    t.add_argument("file", help="audio file (.wav, .mp3, .ogg, .flac, ...), cut at 30 s")
+    t.add_argument("--media", type=int, help="replace one media id instead of an event")
+    t.add_argument("--keep-layers", action="store_true",
+                   help="keep the event's other layers (default: they get 10 ms of silence so your sound plays once)")
+    t.add_argument("--gain", type=float, default=0.0, help="volume change in dB")
+    t = ss.add_parser("reset", description="drop sound replacements")
+    t.add_argument("target", nargs="?", help="event name or media id (default: all)")
+    for name, sp in ss.choices.items():
+        sp.set_defaults(fn=cmd_sound, cmdname=f"sound {name}")
 
     s = add("phys", cmd_phys, "physics route: KawaiiPhysics chains (jiggle, hair, cloth) in the skin's post-process AnimBlueprint")
     ps = s.add_subparsers(dest="action", required=True, parser_class=Parser)

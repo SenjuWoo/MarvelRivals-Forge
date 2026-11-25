@@ -1,8 +1,9 @@
 # MarvelRivals-Forge
 
 A command-line forge for making **Marvel Rivals skin mods**, built so an AI agent (or a person) can go from
-"make this skin red" or "add chest jiggle" to a validated, packaged mod in a handful of commands. Textures,
-materials and physics need no Unreal Editor; mesh edits run Blender and Unreal Engine 5.3.2 headless.
+"make this skin red", "add chest jiggle" or "give her claws a new sound" to a validated, packaged mod in a handful of
+commands. Textures, materials, physics and sounds need no Unreal Editor (and sounds no Wwise); mesh edits run
+Blender and Unreal Engine 5.3.2 headless.
 
 - **One CLI, JSON everywhere**: `mrforge <command>` prints one JSON object with `ok`, `data`, `errors` (each with a
   fix), `warnings` and `gaps`.
@@ -14,7 +15,9 @@ materials and physics need no Unreal Editor; mesh edits run Blender and Unreal E
   chains are replayed from vanilla on every build, so edits never stack or drift.
 - **Physics without the editor**: add KawaiiPhysics chains (chest/butt jiggle) or tune hair and cloth in the skin's
   own post-process AnimBlueprint; the vanilla anim graph stays untouched.
-- **One mod, every route**: a project can combine texture, material, physics and mesh edits; `build` packs them
+- **Sounds without Wwise**: replace a skin's weapon, ability and hero-select sounds with any audio file; the skin's
+  own sound banks get the new audio in place and everything else in them stays byte for byte.
+- **One mod, every route**: a project can combine texture, material, physics, mesh and sound edits; `build` packs them
   into one container and `validate` reads each one back out of it.
 - **Evidence tiers**: `validate` proves static, build and package tiers (including extracting the edited texture back
   out of the built mod); load and gameplay are recorded only from an in-game look.
@@ -79,6 +82,7 @@ mrforge validate
 | material | material instance tints, glow, roughness | v0.1 |
 | mesh | body shape, outfit geometry edits (Blender + UE 5.3.2), in-match and lobby meshes; scripted `mesh inflate` | v0.2 |
 | physics | add jiggle chains, tune hair/cloth/tail chains (KawaiiPhysics) in matches; spring-bone jiggle in the lobby / hero select (built headless in UE 5.3.2) | v1.0 / v1.1 |
+| sound | replace the skin's weapon, ability, hero-select and MVP sounds with your own audio (wav/mp3/ogg); no Wwise | v1.2 |
 
 Lobby jiggle needs Unreal Engine 5.3.2 and Visual Studio 2022 Build Tools (MSVC v143) for the forge's small
 editor plugin; `mrforge doctor` reports the `physics-lobby` route. Load and gameplay are proven only by looking in

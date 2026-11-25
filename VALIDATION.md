@@ -3,6 +3,17 @@
 Evidence per tier. `static`, `build`, `package` are proven by the forge; `load` and `gameplay` only by an in-game
 look (`mrforge check-load --confirm`). "live" = run on the build machine against the installed game and tools.
 
+## v1.2.0 - 2026-11-25 (sound route; not tagged until the beep is heard)
+
+| Check | Result | How |
+|---|---|---|
+| Game audio layout | banks + streamed media in `pakchunkWwise-Windows.pak` (mount `Marvel/Content/WwiseAudio/`), newer banks in the Patch pak; per-skin `bnk_sfx_1061303` (155 media, Vorbis) and `bnk_display_1061303` (4 streamed) | UAssetTool list_pak/extract_pak |
+| Event names | FNV-1 of WwiseEvents package names matches the bank's event ids; 29 of 72 sfx events named, all 228 Sound objects reached from events | live |
+| Bank rebuild | unedited rebuild byte-identical on bnk_sfx_1061303, bnk_display_1061303, bnk_ui_battle; one swap reads back clean | live |
+| Offline suite | pass (101 tests) incl. bank format, event map, PCM .wem, extract/replace/build/validate/deploy loop, tampered pak, bank conflict, mixed container | `python tests/run_tests.py` |
+| Live test mod | 3-tone beep on left_release1..3 (9 variations, 6 layers silenced) and display hover (streamed); build 287 s; validate all pass incl. V-SND; redeployed | live |
+| load / gameplay (sound heard) | **not_run**: owner listens in hero select and the practice range | owner |
+
 ## v1.1.0 - 2026-11-25 (lobby springs)
 
 | Check | Result | How |

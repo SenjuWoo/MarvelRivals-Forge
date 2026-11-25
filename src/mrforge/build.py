@@ -3,8 +3,11 @@
 - textures: inject_texture into the vanilla package
 - materials, physics: UAssetTool from_json on the edited JSON (physics read back at once, decision D25)
 - meshes (changed .blend, or all with force_meshes): Unreal 5.3.2 import + cook (uebuild)
+- sounds: the skin's Wwise banks with media replaced in place (snd.py, decision D31)
 Packer: retoc when the stage holds legacy assets only; UAssetTool create_mod_iostore when it holds cooked meshes
-(retoc refuses tagged cooks; UAssetTool packs both kinds, decision D26).
+(retoc refuses tagged cooks; UAssetTool packs both kinds, decision D26) or sound files (--hybrid: banks as loose
+entries of the companion pak). A sound-only mod is a single .pak (UAssetTool create_pak), the shape community sound
+mods ship (decision D32).
 
 Only changed packages are staged. Output: dist/<PakName>_9999999_P.{pak,utoc,ucas} + dist/receipt.json.
 Never obfuscated, stripped or encrypted (decision D8).
@@ -19,6 +22,7 @@ from pathlib import Path
 from . import mat as M
 from . import phys as PH
 from . import project as P
+from . import snd as SN
 from . import tex as X
 from . import tools as T
 from .extract import load_lock
@@ -32,6 +36,13 @@ TRIPLE = (".pak", ".utoc", ".ucas")
 
 def triple(root: Path, m: dict) -> dict[str, Path]:
     return {ext: Path(root) / "dist" / f"{m['pak_name']}{SUFFIX}{ext}" for ext in TRIPLE}
+
+
+def built_files(root: Path, m: dict) -> dict[str, Path]:
+    """The files the last build made: the IoStore triple, or the .pak alone for a sound-only mod (receipt container)."""
+    tr = triple(root, m)
+    rc = load_json(Path(root) / "dist" / "receipt.json", {})
+    return {".pak": tr[".pak"]} if rc.get("container") == "pak" else tr
 
 
 def _changed_materials(root: Path, lk: dict) -> list[str]:
@@ -101,17 +112,19 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
     m = P.manifest(root)
     lk = load_lock(root, required=False)
     meshes = mesh_packages(root, force_meshes)
-    if not lk.get("changelist") and not meshes:
+    snd_state = SN.load_state(root, required=False)
+    snd_changed = SN.changed(root) if snd_state.get("banks") else []
+    if not lk.get("changelist") and not meshes and not snd_state.get("banks"):
         raise ForgeError("NOT_EXTRACTED", "this project has no vanilla extraction yet",
-                         "mrforge extract --textures <glob> | --materials | --physics | --all, or mrforge mesh export")
+                         "mrforge extract --textures <glob> | --materials | --physics | --sounds | --all, or mrforge mesh export")
     t0 = time.time()
     regenerated = X.regenerate_all(root, lk) if lk.get("textures") else []
     tex_changed = X.changed(root, lk) if lk.get("textures") else []
     mat_changed = _changed_materials(root, lk)
     phys_changed = _changed_physics(root, lk)
-    if not (tex_changed or mat_changed or phys_changed or meshes):
-        raise ForgeError("NOTHING_TO_BUILD", "no texture, material, physics asset or mesh differs from vanilla",
-                         "edit something first: mrforge tex ... / mat set ... / phys add-chain ... / edit a .blend")
+    if not (tex_changed or mat_changed or phys_changed or meshes or snd_changed):
+        raise ForgeError("NOTHING_TO_BUILD", "no texture, material, physics asset, mesh or sound differs from vanilla",
+                         "edit something first: mrforge tex ... / mat set ... / phys add-chain ... / sound replace ... / edit a .blend")
     all_ops = PH.load_ops(root)["assets"]
     phys_ue = [k for k in phys_changed if PH.editor_ops(all_ops.get(k, []))]
     phys_json = [k for k in phys_changed if k not in phys_ue]
@@ -120,7 +133,7 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
         from .game import find_game, version
         groot, _ = find_game(game_arg)
         cl = version(groot)["changelist"]
-    changelist = lk.get("changelist") or cl
+    changelist = lk.get("changelist") or snd_state.get("changelist") or cl
     usmap = require_usmap(changelist)
     stage_root = root / "build" / "stage"
     if stage_root.exists():
@@ -202,12 +215,31 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
             staged.append(rec["package"])
         if "physics" not in routes:
             routes.append("physics")
+    snd_done = {}
+    if snd_changed:
+        snd_done = SN.stage(root, stage)
+        routes.append("sound")
+        for rel in snd_done:
+            for v in SN.load_ops(root)["replace"][rel].values():
+                if v.get("file"):
+                    inputs[v["file"]] = v["sha256"]
     dist = root / "dist"
     dist.mkdir(exist_ok=True)
     tr = triple(root, m)
     for f in tr.values():
         f.unlink(missing_ok=True)
-    if mesh_done or post_done:
+    pak_only = bool(snd_done) and not staged
+    if pak_only:
+        packer = "uassettool"
+        r = run_tool("uassettool", ["create_pak", fwd(tr[".pak"]), fwd(stage)], timeout=1800)
+        ok = r["rc"] == 0 and tr[".pak"].is_file()
+        tr = {".pak": tr[".pak"]}
+    elif snd_done:
+        packer = "uassettool"
+        r = run_tool("uassettool", ["create_mod_iostore", fwd(dist / f"{m['pak_name']}{SUFFIX}"), fwd(stage), "--hybrid"],
+                     timeout=1800)
+        ok = r["rc"] == 0 and "SUCCESS" in r["stdout"]
+    elif mesh_done or post_done:
         packer = "uassettool"
         uassets = sorted(f for f in iter_files(stage) if f.suffix == ".uasset")
         r = run_tool("uassettool", ["create_mod_iostore", fwd(dist / f"{m['pak_name']}{SUFFIX}"), *[fwd(f) for f in uassets]],
@@ -221,6 +253,14 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
     if not ok or missing:
         raise ForgeError("PACK_FAILED", f"{packer}: {(r['stdout'] + r['stderr']).strip()[-500:]} missing={missing}",
                          "run mrforge doctor; inspect build/stage")
+    snd_checks = {}
+    if snd_done:
+        # The banks read back out of the built pak: HIRC and untouched media equal the game's, replaced media equal ours.
+        probs = SN.verify_pak(root, tr[".pak"])
+        if probs:
+            raise ForgeError("SOUND_READBACK_FAILED", "; ".join(probs[:6]), "inspect build/stage/<mod>/Marvel/Content/WwiseAudio")
+        snd_checks = {rel: {"ok": True, "replaced": len(v["replaced"]), "silenced": len(v["silenced"]),
+                            "streamed": len(v["streamed"])} for rel, v in snd_done.items()}
     for x in post_done:
         # The cooked blueprint read back out of the built mod with the game's mappings: springs present and wired.
         probs = _readback_from_mod(root, groot, tr[".utoc"], lk["physics"][x["asset"]]["package"], usmap,
@@ -253,14 +293,22 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
                "staged_packages": sorted(staged), "inputs": inputs,
                "physics_edits": sorted(lk["physics"][k]["package"] for k in phys_changed),
                "outputs": {p.name: sha256_file(p) for p in tr.values()},
-               "pack_argv": r["argv"][1:], "options": {"obfuscate": False, "strip": False, "encrypt": False}}
+               "pack_argv": r["argv"][1:], "options": {"obfuscate": False, "strip": False, "encrypt": False},
+               "container": "pak" if pak_only else "iostore"}
+    if packer == "uassettool":
+        # UAssetTool writes every legacy .pak index with the game's own public AES key, as the game's paks are
+        # (readable by FModel and every extraction tool); the IoStore container itself stays unencrypted (D8, D32).
+        receipt["pak_index"] = "game AES key (public)"
+    if snd_done:
+        receipt["sound_banks"] = snd_done
     if mesh_done:
         from .ue import detect
         receipt.update(route="mesh", ue=detect().get("version"), mesh_packages=meshes, mesh_checks=mesh_checks)
     save_json(dist / "receipt.json", receipt)
     meshes_out = [{k: (str(v) if isinstance(v, Path) else v) for k, v in x.items() if k not in ("staged", "vanilla_raw")}
                   for x in mesh_done]
-    return {"packages": len(staged), "routes": routes, "packer": packer, "textures": tex_changed,
+    return {"packages": len(staged), "routes": routes, "packer": packer, "sounds": snd_checks,
+            "container": "pak" if pak_only else "iostore", "textures": tex_changed,
             "materials": mat_changed, "physics": phys_changed, "physics_checks": phys_checks, "meshes": meshes_out,
             "mesh_checks": mesh_checks, "regenerated": len(regenerated),
             "outputs": [str(p) for p in tr.values()], "seconds": round(time.time() - t0, 1), "warnings": warnings,

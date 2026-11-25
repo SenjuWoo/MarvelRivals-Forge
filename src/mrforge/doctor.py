@@ -170,6 +170,12 @@ def route_checks(tool_state: dict, data_state: dict) -> list[dict]:
     out.append({"route": "physics-lobby", "status": "available" if pl else "unavailable",
                 "needs": "mesh-export + Unreal Engine 5.3.2 + Visual Studio 2022 MSVC v143 (14.34-14.38) + kawaii-physics-rivals",
                 "msvc": msvc or "no VS 2022 MSVC 14.34-14.38", "release": "v1.1"})
+    from .sync import aes_key
+    ff = shutil.which("ffmpeg")
+    sd = bool(tool_state.get("uassettool") and aes_key())
+    out.append({"route": "sound", "status": "available" if sd else "unavailable",
+                "needs": "uassettool (pak read/write) + the game's AES key (mrforge sync); ffmpeg for audio other than "
+                         "16-bit WAV; no Wwise", "ffmpeg": ff or "not on PATH (16-bit WAV input only)", "release": "v1.2"})
     return out
 
 

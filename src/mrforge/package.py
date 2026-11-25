@@ -5,7 +5,7 @@ import zipfile
 from pathlib import Path
 
 from . import project as P
-from .build import triple
+from .build import built_files
 from .util import ForgeError, sha256_file
 
 FIXED_TIME = (1980, 1, 1, 0, 0, 0)
@@ -14,7 +14,7 @@ FIXED_TIME = (1980, 1, 1, 0, 0, 0)
 def run(root: Path) -> dict:
     root = Path(root)
     m = P.manifest(root)
-    tr = triple(root, m)
+    tr = built_files(root, m)
     missing = [p.name for p in tr.values() if not p.is_file()]
     if missing:
         raise ForgeError("NOT_BUILT", f"missing {missing}", "mrforge build && mrforge validate")

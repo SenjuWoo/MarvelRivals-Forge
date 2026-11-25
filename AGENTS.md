@@ -20,11 +20,12 @@ Not installed? `mrforge.cmd <command>` runs from the checkout, or run `Install.p
 ```
 mrforge plan "<what the user asked for>"      # route + exact commands
 mrforge skin find "<name>"  |  mrforge skin inspect <skinId>
-mrforge new "<Mod Name>" --skin <skinId> --kind texture[,material,physics,mesh]
+mrforge new "<Mod Name>" --skin <skinId> --kind texture[,material,physics,mesh,sound]
 cd <project>
-mrforge extract --textures "<glob>" | --materials | --physics | --all
+mrforge extract --textures "<glob>" | --materials | --physics | --sounds | --all
 mrforge mesh export --lobby && mrforge mesh blend          # mesh kind
 mrforge tex ... / mrforge mat set ... / mrforge phys add-chain|set ... / mrforge mesh inflate ... (or Blender)
+mrforge sound list "*left*" / mrforge sound replace <event> <audio file>   # sound kind
 mrforge tex sheet / mrforge mesh preview   # LOOK at build/preview/*.png before building
 mrforge mesh check                         # mesh kind
 mrforge build                              # one container for every edit
@@ -43,13 +44,13 @@ mrforge check-load           # after the user looked in game; --confirm "<what t
 | Verified facts with tier and source | `mrforge facts [--grep x]` |
 | How a route works | `mrforge knowledge <topic>` |
 | Tool versions and hashes | `tools.lock.json` |
-| A project's state | `<project>/mrforge.json`, `vanilla.lock.json`, `work/ops.json`, `work/mat_ops.json`, `work/phys_ops.json`, `work/mesh/edits.json`, `dist/receipt.json` |
+| A project's state | `<project>/mrforge.json`, `vanilla.lock.json`, `work/ops.json`, `work/mat_ops.json`, `work/phys_ops.json`, `work/mesh/edits.json`, `work/sounds/sounds.json`, `work/sounds/ops.json`, `dist/receipt.json` |
 
 ## Module map (`src/mrforge/`)
 
 cli (parser, JSON contract) - home (forge home, config, log) - game (Steam discovery, build, loader) - tools
 (lock, setup, run) - sync (usmap, key) - index (vanilla listing) - catalog (names) - skin (inspect) - mods
-(installed mods, conflicts) - project (new, bump) - extract - tex (Pillow ops) - mat (material JSON) - phys (KawaiiPhysics chains in Post_*_Physics JSON) - build (every route,
+(installed mods, conflicts) - project (new, bump) - extract - tex (Pillow ops) - mat (material JSON) - phys (KawaiiPhysics chains in Post_*_Physics JSON) - snd (Wwise banks: events, in-place PCM media) - build (every route,
 one container) -
 validate - package - deploy - checkload - selftest - doctor - knowledge (facts, routes, plan) - ue (UE 5.3.2
 detection) - uat (UAssetTool output parsers) - mesh (export, Blender, inflate, preview, check) - uebuild (UE import +

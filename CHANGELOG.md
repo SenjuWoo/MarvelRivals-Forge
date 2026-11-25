@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.2.0 - 2026-11-25
+
+Sound route: replace a skin's sounds with your own audio. No Wwise and no Unreal Editor.
+
+- `mrforge extract --sounds` pulls the skin's Wwise banks (`bnk_sfx_<skin>`, `bnk_display_<skin>`; `--bank <name>`
+  for others) from the game's sound paks, newest patch first, and maps every event name to its media.
+- `mrforge sound list` shows events with their variations and layers; `mrforge sound replace <event> <file>` takes
+  any audio ffmpeg reads (a 16-bit WAV needs no ffmpeg), cuts it at 30 s, applies `--gain`, puts it in every
+  variation and silences stacked layers (`--keep-layers` keeps them); `--media <id>` replaces one media;
+  `mrforge sound reset`.
+- `build` writes the audio as Wwise PCM media in place in the bank (HIRC byte-identical, DIDX order and alignment
+  kept; an unedited rebuild is byte-identical to the game's bank) plus the loose copy of a streamed sound. The
+  banks go into the mod's companion pak; a sound-only mod is a single `.pak`.
+- `build` and the new V-SND rule read the banks back out of the built pak. V-CONFLICT names installed mods that
+  carry the same bank (the game loads one copy of a bank). Doctor route `sound`.
+- `deploy` and `package` handle a pak-only mod and clear a stale file when a mod's container shape changes.
+
 ## 1.1.0 - 2026-11-25
 
 Lobby (hero select) jiggle, built headless in Unreal Engine 5.3.2.

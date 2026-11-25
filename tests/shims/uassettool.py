@@ -68,10 +68,78 @@ def write_pkg(out_root, path, meta, files_b64=None):
         stem.with_suffix(".uasset").write_text(json.dumps({"kind": kind}), encoding="utf-8")
 
 
+def read_pak(pak):
+    """A legacy pak: mod paks are JSON written by this shim; game paks are described in <Paks>/fake_audio.json."""
+    p = Path(pak)
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeDecodeError):
+        pass
+    desc = p.parent / "fake_audio.json"
+    if desc.is_file():
+        return json.load(open(desc, encoding="utf-8")).get(p.name)
+    return None
+
+
+def raw_files(inputs):
+    out = {}
+    for i in inputs:
+        src = Path(i)
+        for f in sorted(src.rglob("*")) if src.is_dir() else [src]:
+            if f.is_file():
+                out[f.relative_to(src).as_posix() if src.is_dir() else f.name] = f
+    return out
+
+
 def main(a):
     cmd = a[0] if a else ""
     if cmd == "version":
         print("UAssetTool v1.5.9+shim")
+        return 0
+    if cmd == "list_pak":
+        pak = read_pak(a[1])
+        if pak is None:
+            print("error: not a pak", file=sys.stderr)
+            return 1
+        print(f"PAK: {a[1]}\n  Version:         11\n  Mount Point:     {pak['mount']}\n  Encrypted Index: True\n"
+              f"  Total Files:     {len(pak['files'])}\n")
+        for e, b64 in sorted(pak["files"].items()):
+            print(f"  {e}\n      {len(base64.b64decode(b64)):,} bytes (stored: 1) [enc]")
+        return 0
+    if cmd == "extract_pak":
+        pak, out = read_pak(a[1]), Path(a[2])
+        pats = patterns(a)
+        n = 0
+        for e, b64 in (pak or {}).get("files", {}).items():
+            if not pats or any(x in e for x in pats):
+                f = out / e.lstrip("/")
+                f.parent.mkdir(parents=True, exist_ok=True)
+                f.write_bytes(base64.b64decode(b64))
+                n += 1
+        print(f"Extraction complete: {n} extracted, 0 failed")
+        return 0 if pak is not None else 1
+    if cmd == "create_pak":
+        files = raw_files([x for x in a[2:] if not x.startswith("--")])
+        Path(a[1]).write_text(json.dumps({"mount": "../../../", "files": {
+            k: base64.b64encode(f.read_bytes()).decode() for k, f in files.items()}}), encoding="utf-8")
+        print(f"SUCCESS: Created PAK file at {a[1]} ({len(files)} entries)")
+        return 0
+    if cmd == "create_mod_iostore":
+        base = Path(a[1])
+        files = raw_files([x for x in a[2:] if not x.startswith("--")])
+        pkgs, raw = {}, {}
+        for rel, f in files.items():
+            stem, ext = rel.rsplit(".", 1)
+            if ext in ("uasset", "uexp", "ubulk", "uptnl"):
+                pkgs.setdefault(stem + ".uasset", {})["." + ext] = base64.b64encode(f.read_bytes()).decode()
+            elif "--hybrid" in a:
+                raw[rel] = base64.b64encode(f.read_bytes()).decode()
+        base.parent.mkdir(parents=True, exist_ok=True)
+        base.with_suffix(".utoc").write_text(json.dumps({"flags": ["Compressed", "Indexed"], "packages": sorted(pkgs),
+                                                         "files": pkgs}, sort_keys=True), encoding="utf-8")
+        base.with_suffix(".ucas").write_bytes(b"ucas")
+        base.with_suffix(".pak").write_text(json.dumps({"mount": "../../../", "files": raw}), encoding="utf-8")
+        print(f"SUCCESS\n  Assets converted: {len(pkgs)}\n  Raw (hybrid) files in companion PAK: {len(raw)}")
         return 0
     if cmd == "list_iostore":
         paks, filt = a[1], opt(a, "--filter", "")
