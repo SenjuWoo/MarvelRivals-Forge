@@ -43,6 +43,13 @@
       "date": "2026-11-15"
     },
     {
+      "id": "layout.singular_folders",
+      "statement": "Some skin folders use the singular Texture/ (240 of 751 skin folders in build 4066382, e.g. 1015001) or Material/ (24 skins, e.g. 1031502) instead of Textures/ and Materials/.",
+      "tier": "verified-local",
+      "source": "mrforge index (build 4066382)",
+      "date": "2026-11-25"
+    },
+    {
       "id": "layout.hero_id",
       "statement": "A skin id has 7 digits; its first 4 are the hero id.",
       "tier": "verified-local",

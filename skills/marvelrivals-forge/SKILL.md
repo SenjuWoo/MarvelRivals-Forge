@@ -1,10 +1,10 @@
 ---
 name: marvelrivals-forge
 description: Make, check, package and deploy Marvel Rivals skin mods (recolors, retextures, logos, skin tone, material tints and glow, body-shape and outfit mesh edits, jiggle/hair/cloth physics, custom weapon/ability/hero-select sounds) with the mrforge CLI. Use for any Marvel Rivals mod, .pak/.utoc/.ucas, ~mods, skin id, texture, material, mesh, physics or sound edit request.
-version: 1.2.1
+version: 1.2.2
 ---
 
-# MarvelRivals-Forge (mrforge 1.2.1)
+# MarvelRivals-Forge (mrforge 1.2.2)
 
 Every command prints JSON `{ok, data, errors[{code,message,fix}], warnings, gaps}`; exit 0/1/2 (usage)/3
 (environment). Follow `errors[].fix`. If `mrforge` is not on PATH, run `mrforge.cmd` from the forge folder.

@@ -1,8 +1,8 @@
 # STATE
 
-Version: 1.2.1 (extract fix for Texture/ and Material/ folders, launcher exit code, README and cover)
+Version: 1.2.2 (knowledge records Texture/ and Material/ folders; 1.2.1: extract fix, launcher exit code, README and cover)
 Updated: 2026-11-25
-Last known-good release: v1.2.1 (see the v1.2.1 tag; CI green on the tagged commit); previous v1.2.0
+Last known-good release: v1.2.2 (see the v1.2.2 tag; CI green on the tagged commit); previous v1.2.1
 
 ## Goal
 
@@ -40,6 +40,13 @@ pinned tools, facts from the installed game, build -> validate -> package -> dep
 - Animation research (2026-11-25): per-skin animation assets exist for hero select, hero details, MVP and camera
   (1061303: Animations/HeroDetails, Mvp, Camera); combat animations are the hero's (1061001) and shared by every
   skin, except a few rig-changing skins (e.g. 1016502, 1018300) that ship whole sets. Not a route yet.
+- v1.2.1 (presentation pass, released): `extract` now selects `Texture/` and `Material/` folders (240 of 751 skin
+  folders in build 4066382 use `Texture/`, 24 use `Material/`; live: Storm 1015001 extract + tint + build +
+  validate + package pass, 1031502 `extract --materials` selects 33); `mrforge.cmd` passes exit codes through
+  with a `.venv`; README rewritten with `docs/presentation/` cover and terminal shots from real runs; icon
+  `docs/icon.svg`. Tests 103.
+- v1.2.2: asset-layout doc and fact `layout.singular_folders`; `skin list` hint names Storm; README catalog/CI
+  wording.
 
 ## Not done / not verified
 

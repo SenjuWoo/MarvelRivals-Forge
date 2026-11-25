@@ -73,7 +73,7 @@ mrforge deploy           # optional: copies into ~mods\ZZZ-mrforge-red-storm\
 ```
 
 Skin names come from a snapshot table; heroes added after it show by id only (`mrforge hero list`,
-`mrforge skin inspect <skinId>`), and `mrforge catalog` refreshes the names from upstream.
+`mrforge skin inspect <skinId>`), and `mrforge catalog sync` refreshes the names from upstream.
 
 ![Terminal: mrforge plan routes "make Storm's suit red" to the texture route with the exact commands; mrforge skin find storm lists Storm (Default) 1015001 and Ivory Breeze 1015100; mrforge skin inspect 1015001 counts 1195 packages in build 4066382, among them 39 materials, 16 meshes, 11 physics assets and 55 textures](docs/presentation/screenshot-plan-skin.png)
 
@@ -120,7 +120,7 @@ Lobby jiggle: `mrforge phys springs --region chest|butt|thighs` (or `--bone <bon
 | Route a request to exact commands | `mrforge plan "<request>"` |
 | Knowledge docs and verified facts | `mrforge knowledge [topic]` · `mrforge facts [--grep x]` |
 | Tools, mapping, index | `mrforge setup` · `mrforge sync` · `mrforge index` |
-| Heroes, skins, what a skin contains | `mrforge hero list` · `mrforge skin find\|list\|inspect` · `mrforge catalog` |
+| Heroes, skins, what a skin contains | `mrforge hero list` · `mrforge skin find\|list\|inspect` · `mrforge catalog sync` |
 | Installed mods and overlaps (read-only) | `mrforge mods` · `mrforge conflicts` |
 | New project, version bump | `mrforge new <name> --skin <id> --kind texture,material,mesh,physics,sound` · `mrforge bump` |
 | Vanilla assets of the skin | `mrforge extract --textures <glob> \| --materials \| --physics \| --sounds \| --all` |
@@ -161,7 +161,7 @@ containers. See [SECURITY.md](SECURITY.md).
 
 `python tests/run_tests.py` runs the offline suite with shims for both packing tools and synthetic game fixtures;
 CI runs it on Windows and Linux for Python 3.10 and 3.13, fetches the pinned tools from their releases and checks
-their versions, installs and uninstalls twice, and builds the release archive twice to prove it is deterministic.
+their versions, installs twice (the second run must converge) and uninstalls, and builds the release archive twice to prove it is deterministic.
 The live smoke runs (`mrforge selftest ...`) need the game and run locally.
 
 ## License

@@ -15,6 +15,9 @@ Marvel/Content/Marvel/Characters/<hero>/<skin>/
 Marvel/Content/Marvel/VFX/{Meshes,Textures}/Characters/<hero>/<skin>/   skin VFX
 ```
 
+- Folder names are not uniform: in build 4066382, 240 of 751 skin folders keep their textures in `Texture/`
+  (singular, e.g. Storm 1015001) and 24 keep materials in `Material/`. `mrforge extract` accepts both spellings.
+
 - Materials often point at parents and textures of the hero's default skin (`<hero>001`), e.g.
   `MI_1061303_Body_01` has parent `M_1061001_Skin`. Editing such a shared asset changes every skin that uses it.
   `mrforge skin inspect <id>` lists these under `shared_from_other_skins`.

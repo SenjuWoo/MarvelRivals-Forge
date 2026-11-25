@@ -232,7 +232,7 @@ def cmd_skin(args, out):
     text = " ".join(args.text) if args.text else ""
     if args.action == "list":
         if not text:
-            raise UsageError("skin list needs a hero name or id", "mrforge skin list \"Black Cat\"")
+            raise UsageError("skin list needs a hero name or id", "mrforge skin list \"Storm\"")
         return {"skins": skins_of(text)}
     if args.action == "find":
         if not text:

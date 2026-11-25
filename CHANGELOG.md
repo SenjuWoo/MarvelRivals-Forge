@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.2 - 2026-11-25
+
+Knowledge and hint follow-up to 1.2.1.
+
+- `knowledge/asset-layout.md` and a new fact `layout.singular_folders` record that 240 of 751 skin folders use
+  `Texture/` and 24 use `Material/` (build 4066382); live check: `extract --materials` on 1031502 selects 33.
+- The `skin list` usage hint names a hero that is in the skin table (`Storm`).
+- README: `mrforge catalog sync`, and the CI line describes the install job as it runs (install twice, uninstall).
+
 ## 1.2.1 - 2026-11-25
 
 Fixes found while checking the README against real runs.
