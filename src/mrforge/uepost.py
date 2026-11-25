@@ -114,6 +114,17 @@ def mesh_for(asset_key: str, m: dict) -> str:
     return base + ("_Lobby.uasset" if asset_key.endswith("_Lobby_Physics") else ".uasset")
 
 
+def unweighted(bones: list[str], arm_bones: list[dict], weighted: set[str]) -> list[str]:
+    """Bones whose own and descendants' skin weights are all zero: a spring there compiles and moves nothing."""
+    kids: dict[str, list[str]] = {}
+    for b in arm_bones:
+        kids.setdefault(b["parent"], []).append(b["name"])
+
+    def moves_skin(name: str) -> bool:
+        return name in weighted or any(moves_skin(c) for c in kids.get(name, []))
+    return [b for b in bones if not moves_skin(b)]
+
+
 def build_postprocess(root: Path, groot: Path, key: str, rec: dict, ops: list[dict], usmap: Path, stage: Path,
                       game_arg=None) -> dict:
     """Build one post-process AnimBlueprint with springs; copies the cooked asset into stage."""
@@ -153,7 +164,14 @@ def build_postprocess(root: Path, groot: Path, key: str, rec: dict, ops: list[di
     if missing:
         raise ForgeError("SPRING_BONE_UNKNOWN", f"not in {Path(mesh_pkg).stem}'s skeleton: {missing}",
                          "check the names in Blender (mrforge mesh blend) and mrforge phys reset + springs again")
-    job = {"fbx": str(fbx.resolve()), "mesh_tmp_path": "/Game/MrforgeTmp/SK_SkeletonSource",
+    weighted = {g for msh in summ.get("meshes", []) for g in msh.get("weighted_groups", [])}
+    arm_bones = [b for a in summ.get("armatures", []) for b in a["bones"]]
+    dead = unweighted([s["bone"] for s in spec["springs"]], arm_bones, weighted) if weighted else []
+    if dead:
+        raise ForgeError("SPRING_BONE_UNWEIGHTED", f"no skin follows {dead} in {Path(mesh_pkg).stem} (zero weights on "
+                         "the bone and its children)", "pick bones that carry the soft tissue (mrforge phys springs "
+                         "--region chest|butt|thighs, or check the vertex groups in Blender); mrforge phys reset first")
+    job ={"fbx": str(fbx.resolve()), "mesh_tmp_path": "/Game/MrforgeTmp/SK_SkeletonSource",
            "skeleton_path": refs["skeleton"], "abp_path": asset_path, "fmodel_json": str(js[rec["package"]].resolve()),
            "spec": spec}
     jp = work / "ue_job.json"

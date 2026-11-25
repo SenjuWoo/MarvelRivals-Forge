@@ -1,6 +1,6 @@
 # STATE
 
-Version: 1.1.0 (adds lobby spring jiggle built headless in UE 5.3.2; v1.1.0 tag held until the in-game look)
+Version: 1.1.0 (lobby spring jiggle built headless in UE 5.3.2; chest jiggle confirmed in game)
 Updated: 2026-11-25
 Last known-good release: v1.0.1 (tag on 5faa5a3, CI green, published asset re-hashed)
 
@@ -29,16 +29,19 @@ pinned tools, facts from the installed game, build -> validate -> package -> dep
   MrforgeAnimTools C++ plugin (VS 2022 MSVC 14.36) wires it and appends spring bones, cooked at the vanilla path.
   Test mod rebuilt with 6 lobby springs (breasts 01/02, butt) + in-match chains; validate all pass; redeployed.
   VS 2022 Build Tools installed (owner-approved); `setup --from` folder-adoption bug fixed.
+- Owner 2026-11-25: lobby chest jiggle visible in game (check-load recorded, gameplay tier). Then `--region
+  chest|butt|thighs` and the SPRING_BONE_UNWEIGHTED guard; test mod rebuilt with 12 lobby springs (chest, butt,
+  thighs; the rig has no belly bone) and in-match chains on chest + butt; validate all pass; redeployed. Released
+  as v1.1.0.
 
 ## Not done / not verified
 
-- Lobby springs and in-match chains in game: owner look pending (hero select for springs, practice range for
-  chains). Tag/release v1.1.0 only after that look.
+- In game: butt/thigh springs (12-spring build) and the in-match chains (practice range) not yet looked at.
 - T29 bundle part (companion registry + ai-tooling-stack row) lives in the bundle repository.
 
 ## NEXT ACTION
 
-Owner in-game check of the redeployed test mod (lobby jiggle + practice range), then tag v1.1.0 (T45):
+Optional owner look at butt/thigh jiggle (hero select) and the in-match chains (practice range):
 `mrforge check-load forge-v1-test --confirm "<what you saw>"`.
 
 ## Build / run
@@ -61,3 +64,4 @@ Owner in-game check of the redeployed test mod (lobby jiggle + practice range), 
 - 2026-11-25 v1.0.0 session: game patched to 4066382; physics route, inflate/preview, unified build, live test mod.
 - 2026-11-25 owner in-game look: mesh deformed -> v1.0.1 (root-bone scale + normals fixed, V-MESH bind pose).
 - 2026-11-25 owner: mesh/texture OK in game, no lobby jiggle -> v1.1.0 lobby springs (UE headless, own plugin).
+- 2026-11-25 owner: lobby chest jiggle works -> regions (butt, thighs), weight guard, v1.1.0 released.

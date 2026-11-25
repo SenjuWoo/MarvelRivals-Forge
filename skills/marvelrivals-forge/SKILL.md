@@ -33,14 +33,15 @@ Every command prints JSON `{ok, data, errors[{code,message,fix}], warnings, gaps
    static/build/package rules pass: V-TEX, V-MAT, V-PHYS, V-MESH as applicable), `mrforge package`.
 8. Only if the user wants it in game: `mrforge deploy`; after they look: `mrforge check-load --confirm "<note>"`.
 
-## Jiggle (chest/butt)
+## Jiggle (chest/butt/thighs)
 - In matches: `mrforge extract --physics`, then
-  `mrforge phys add-chain --root L_Breast_01_Jnt --root R_Breast_01_Jnt --preset jiggle` (no editor).
-- In the lobby / hero select (what people look at first): `mrforge phys springs --bone L_Breast_01_Jnt
-  --bone L_Breast_02_Jnt --bone R_Breast_01_Jnt --bone R_Breast_02_Jnt --bone L_ButtScale --bone R_ButtScale`.
+  `mrforge phys add-chain --root L_Breast_01_Jnt --root R_Breast_01_Jnt --preset jiggle` (no editor; leaf bones
+  such as `L_ButtScale` work through the preset's dummy tip).
+- In the lobby / hero select (what people look at first, confirmed in game for the chest):
+  `mrforge phys springs --region chest --region butt --region thighs` (or `--bone <name>`, repeatable).
   The build rebuilds the vanilla lobby blueprint in Unreal 5.3.2 plus spring-bone nodes (needs the
   `physics-lobby` doctor route: VS 2022 MSVC v143). One asset takes either chains or springs, not both.
-- Check bone names in Blender after `mesh blend`; the build refuses spring bones the skeleton lacks.
+- The female body rig has no belly bone. The build refuses spring bones the skeleton lacks or that move no skin.
 
 ## Do not
 - edit files under the game folder or `~mods` yourself; `deploy`/`undeploy` do it with receipts.

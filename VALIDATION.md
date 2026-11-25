@@ -3,7 +3,7 @@
 Evidence per tier. `static`, `build`, `package` are proven by the forge; `load` and `gameplay` only by an in-game
 look (`mrforge check-load --confirm`). "live" = run on the build machine against the installed game and tools.
 
-## v1.1.0 - 2026-11-25 (lobby springs; not tagged until the in-game look)
+## v1.1.0 - 2026-11-25 (lobby springs)
 
 | Check | Result | How |
 |---|---|---|
@@ -17,7 +17,11 @@ look (`mrforge check-load --confirm`). "live" = run on the build machine against
 | `mrforge build` (test mod) | 5 packages (texture, in-match physics, lobby physics, 2 meshes), UAssetTool packer, bind pose equal, 520 s | live |
 | `mrforge validate` (test mod) | static/build/package pass (V-TEX, V-PHYS x2, V-MESH, V-CONFLICT) | live |
 | Redeploy | `~mods/ZZZ-mrforge-forge-v1-test` (zip SHA-256 `3e0178d1...420b`) | live |
-| load / gameplay (springs, chains) | **not_run**: owner look pending | owner |
+| load / gameplay (lobby chest springs) | **pass**: chest jiggle visible in the lobby | owner, `check-load --tier gameplay` |
+| `--region` + weight guard | rig weights read in Blender: ButtScale ~3.6k, thigh_muscle_01..03 0.9-2.6k weighted vertices; thigh_l/r none; no belly bone | live |
+| Rebuild with 12 springs (chest, butt, thighs) + in-match chains on chest and butt | build ok (271 s, meshes reused), read-back 12 springs wired; validate all pass; redeployed | live |
+| Offline suite | pass (92 tests) incl. regions, unweighted guard | `python tests/run_tests.py` |
+| load / gameplay (butt/thigh springs, in-match chains) | **not_run**: owner look optional | owner |
 
 ## v1.0.1 - 2026-11-25 (mesh fix after the first in-game look)
 

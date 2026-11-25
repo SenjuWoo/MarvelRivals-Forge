@@ -48,6 +48,11 @@ Lobby / hero select: springs (v1.1, Unreal 5.3.2 headless)
 - Lobby assets can have no KawaiiPhysics node at all (1061303's lobby asset has 34 nodes, none KawaiiPhysics), so
   `add-chain` cannot extend them. `mrforge phys springs --bone <bone> ...` records spring-bone jiggle instead
   (presets reference = stiffness 80, damping 6, 3 cm, the values of a working community lobby mod; soft; firm).
+- `--region chest|butt|thighs` (repeatable) expands to the female body rig's soft-tissue bones: chest =
+  `L/R_Breast_01_Jnt`, `_02_Jnt`; butt = `L/R_ButtScale`; thighs = `thigh_muscle_01..03_l/_r`. The 1061303 rig has
+  no belly bone (the spine bones carry the torso; springing them sways the whole upper body).
+- The build refuses a spring bone the skeleton lacks (SPRING_BONE_UNKNOWN) or whose skin weights, with its
+  children's, are all zero (SPRING_BONE_UNWEIGHTED): both would compile and move nothing.
 - At `mrforge build`: the vanilla blueprint is exported as FModel JSON and its mesh's skeleton as FBX (game
   containers only); UE 5.3.2 imports the skeleton, creates the blueprint at the vanilla path, rebuilds every vanilla
   node with the KawaiiPhysicsRivals importer (the build fails if it skips a node type), and the forge's

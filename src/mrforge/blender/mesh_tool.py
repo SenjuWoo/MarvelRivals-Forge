@@ -24,9 +24,11 @@ def summary() -> dict:
         if ob.type == "MESH":
             me = ob.data
             me.calc_loop_triangles()
+            used = {e.group for v in me.vertices for e in v.groups if e.weight > 0.0}
             meshes.append({"name": ob.name, "vertices": len(me.vertices), "triangles": len(me.loop_triangles),
                            "material_slots": [s.material.name if s.material else s.name for s in ob.material_slots],
-                           "vertex_groups": [g.name for g in ob.vertex_groups]})
+                           "vertex_groups": [g.name for g in ob.vertex_groups],
+                           "weighted_groups": [g.name for g in ob.vertex_groups if g.index in used]})
         elif ob.type == "ARMATURE":
             bones = [{"name": b.name, "parent": b.parent.name if b.parent else None} for b in ob.data.bones]
             h = hashlib.sha256(json.dumps(bones).encode()).hexdigest()

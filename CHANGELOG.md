@@ -10,6 +10,9 @@ Lobby (hero select) jiggle, built headless in Unreal Engine 5.3.2.
   editor plugin MrforgeAnimTools wires the graph ends and appends the springs before the output, and the blueprint
   is compiled, cooked and packed at its vanilla path (no mesh relink; the skeleton and importer stubs stay out of
   the mod). `build` reads it back from the mod (springs present, wired to the output); V-PHYS checks it again.
+- `--region chest|butt|thighs` expands to the body rig's soft-tissue bones (breast joints, ButtScale, thigh
+  muscle joints). The build refuses spring bones the skeleton lacks or that move no skin (zero weights on the bone
+  and its children).
 - MrforgeAnimTools (C++ editor plugin, source in `src/mrforge/unreal/MrforgeAnimTools`) is built once per source
   change with UBT pinned to a Visual Studio 2022 MSVC toolset UE 5.3 accepts (14.36 preferred, 14.34-14.38).
 - Pinned KawaiiPhysicsRivals v2.1.0 in `tools.lock.json`; doctor route `physics-lobby`.

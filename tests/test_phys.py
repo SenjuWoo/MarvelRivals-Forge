@@ -225,6 +225,25 @@ class Springs(ForgeCase):
         self.assertEqual(pick_compiler(["14.44.35207", "14.38.33130"]), "14.38.33130")
         self.assertIsNone(pick_compiler(["14.44.35207", "14.52.37025"]))
 
+    def test_regions(self):
+        self.assertEqual(PH.region_bones(["butt"], ["L_ButtScale"]), ["L_ButtScale", "R_ButtScale"])
+        thighs = PH.region_bones(["thighs"], [])
+        self.assertIn("thigh_muscle_01_l", thighs)
+        self.assertEqual(len(PH.region_bones(["chest", "butt", "thighs"], [])), 12)
+        with self.assertRaises(UsageError):
+            PH.region_bones(["belly"], [])
+        with self.assertRaises(UsageError):
+            PH.region_bones([], [])
+
+    def test_unweighted_springs(self):
+        from mrforge.uepost import unweighted
+        arm = [{"name": "pelvis", "parent": None}, {"name": "thigh_l", "parent": "pelvis"},
+               {"name": "calf_l", "parent": "thigh_l"}, {"name": "ik_spine", "parent": "pelvis"},
+               {"name": "L_ButtScale", "parent": "thigh_l"}]
+        weighted = {"pelvis", "calf_l", "L_ButtScale"}
+        # thigh_l carries no weight itself but its children do: it moves skin, so it is allowed
+        self.assertEqual(unweighted(["L_ButtScale", "thigh_l", "ik_spine"], arm, weighted), ["ik_spine"])
+
     def test_mesh_for(self):
         from mrforge.uepost import mesh_for
         m = {"hero_id": "1061", "skin_id": SKIN}
@@ -252,3 +271,12 @@ class SpringsCli(ForgeCase):
         self.assertEqual(code, 0, d)
         code, d = self.cli("phys", "springs", "--bone", "Y", "--asset", f"Post_{SKIN}_Physics", cwd=self.root)
         self.assertEqual(d["errors"][0]["code"], "PHYS_ROUTE_MIX")
+
+    def test_springs_by_region(self):
+        code, d = self.cli("phys", "springs", "--region", "butt", "--region", "thighs", cwd=self.root)
+        self.assertEqual(code, 0, d)
+        bones = d["data"]["added"][0]["result"][0]["springs"]
+        self.assertEqual(len(bones), 8)
+        self.assertIn("R_ButtScale", bones)
+        code, d = self.cli("phys", "springs", cwd=self.root)
+        self.assertEqual(code, 2, d)

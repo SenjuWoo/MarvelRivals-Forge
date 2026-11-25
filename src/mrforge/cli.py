@@ -428,10 +428,8 @@ def cmd_phys(args, out):
         return {"added": done, "next": "mrforge build, then mrforge validate"}
     if a == "springs":
         params = PH.spring_params(args.preset, args.stiffness, args.damping, args.max_displacement, args.rotate)
-        done = PH.record(root, lk, args.asset, {"op": "springs", "bones": args.bone, "params": params})
-        names = set()
-        for k in {x["asset"] for x in done}:
-            names |= set(load_json(root / lk["physics"][k]["vanilla_json"]).get("NameMap", []))
+        bones = PH.region_bones(args.region, args.bone)
+        done = PH.record(root, lk, args.asset, {"op": "springs", "bones": bones, "params": params})
         out.gaps.append("springs are built in Unreal 5.3.2 at mrforge build (needs VS 2022 MSVC v143); the result is "
                         "proven only by an in-game look")
         return {"added": done, "note": "the asset is rebuilt from its vanilla graph plus these springs at build time",
@@ -717,7 +715,9 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--chain", type=int, help="chain index inside the node")
     t.add_argument("--asset", help="physics asset (default: every extracted asset with KawaiiPhysics nodes)")
     t = ps.add_parser("springs", description="spring-bone jiggle rebuilt in Unreal (hero select / lobby: no KawaiiPhysics node there)")
-    t.add_argument("--bone", action="append", required=True, help="bone that jiggles, e.g. L_Breast_01_Jnt (repeatable)")
+    t.add_argument("--region", action="append",
+                   help="body region: chest, butt, thighs (repeatable; expands to the rig's soft-tissue bones)")
+    t.add_argument("--bone", action="append", help="bone that jiggles, e.g. L_Breast_01_Jnt (repeatable)")
     t.add_argument("--preset", choices=["reference", "soft", "firm"], default="reference")
     t.add_argument("--stiffness", type=float, help="spring stiffness (reference 80)")
     t.add_argument("--damping", type=float, help="spring damping (reference 6)")

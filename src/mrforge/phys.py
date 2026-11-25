@@ -62,6 +62,28 @@ SPRING_PRESETS = {
     "firm": {"stiffness": 120.0, "damping": 10.0, "max_displacement": 2.0},
 }
 EDITOR_OPS = ("springs",)
+# Soft-tissue bones of the Rivals female body rig (read from the 1061303 lobby skeleton with skin weights): chest =
+# breast joints, butt = ButtScale (child of the thigh, sits behind it), thighs = the thigh_muscle joints (front, outer,
+# back). There is no belly bone on that rig. The build refuses names a skeleton lacks or that move no skin.
+SPRING_REGIONS = {
+    "chest": ["L_Breast_01_Jnt", "L_Breast_02_Jnt", "R_Breast_01_Jnt", "R_Breast_02_Jnt"],
+    "butt": ["L_ButtScale", "R_ButtScale"],
+    "thighs": ["thigh_muscle_01_l", "thigh_muscle_02_l", "thigh_muscle_03_l",
+               "thigh_muscle_01_r", "thigh_muscle_02_r", "thigh_muscle_03_r"],
+}
+
+
+def region_bones(regions: list[str] | None, bones: list[str] | None) -> list[str]:
+    """--region names expanded to bones, plus explicit --bone names, in order without repeats."""
+    out = []
+    for r in regions or []:
+        if r not in SPRING_REGIONS:
+            raise UsageError(f"unknown region {r!r}", f"one of: {', '.join(SPRING_REGIONS)}, or name bones with --bone")
+        out += SPRING_REGIONS[r]
+    out += bones or []
+    if not out:
+        raise UsageError("no bones: give --region and/or --bone", f"regions: {', '.join(SPRING_REGIONS)}")
+    return list(dict.fromkeys(out))
 
 
 def spring_params(preset: str | None, stiffness=None, damping=None, max_displacement=None, rotate=False) -> dict:

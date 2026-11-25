@@ -405,6 +405,20 @@
       "tier": "verified-local",
       "source": "owner screenshot 2026-11-25",
       "date": "2026-11-25"
+    },
+    {
+      "id": "load.lobby_springs",
+      "statement": "Lobby spring jiggle on L/R_Breast_01/02_Jnt (reference preset) shows in game on Post_1061303_Lobby_Physics.",
+      "tier": "verified-local",
+      "source": "owner in-game look 2026-11-25",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "rig.soft_tissue",
+      "statement": "The 1061303 lobby rig's skinned soft-tissue bones: L/R_Breast_01/02_Jnt (child of spine_04), L/R_ButtScale (child of thigh, ~3.6k weighted vertices), thigh_muscle_01..04_l/r (children of Hip_Fix joints); thigh_l/r carry no weights themselves; there is no belly bone.",
+      "tier": "verified-local",
+      "source": "Blender vertex-group weights of the exported lobby mesh",
+      "date": "2026-11-25"
     }
   ]
 }

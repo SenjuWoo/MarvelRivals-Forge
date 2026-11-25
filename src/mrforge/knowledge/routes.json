@@ -192,7 +192,7 @@
         "cd <project>; mrforge extract --physics",
         "mrforge phys list   (nodes, chains, root bones, parameters)",
         "mrforge phys add-chain --root L_Breast_01_Jnt --root R_Breast_01_Jnt --preset jiggle   (in matches)",
-        "mrforge phys springs --bone L_Breast_01_Jnt --bone L_Breast_02_Jnt --bone R_Breast_01_Jnt --bone R_Breast_02_Jnt   (lobby)",
+        "mrforge phys springs --region chest --region butt --region thighs   (lobby; or --bone <name>)",
         "mrforge phys set Damping 0.25 --bone \"*hair*\"   (tune existing chains)",
         "mrforge build",
         "mrforge validate",
