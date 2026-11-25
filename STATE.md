@@ -2,7 +2,7 @@
 
 Version: 1.0.0 (texture, material, physics and mesh routes; one build for every route)
 Updated: 2026-11-25
-Last known-good release: v0.2.0 (until v1.0.0 is tagged and verified; see PLAN.md T41)
+Last known-good release: v1.0.0 (tag on 132516c, CI green, published asset re-hashed)
 
 ## Goal
 
@@ -12,7 +12,7 @@ pinned tools, facts from the installed game, build -> validate -> package -> dep
 ## Done
 
 - v0.1.0 (T01-T28): texture and material routes. v0.2.0 (T30-T33): mesh route through Blender + UE 5.3.2.
-- v1.0.0 (T35-T40): game build 4066382 refresh; physics route (`extract --physics`, `phys list/add-chain/set/
+- v1.0.0 (T35-T41, released): game build 4066382 refresh; physics route (`extract --physics`, `phys list/add-chain/set/
   reset/presets`, V-PHYS); `mesh inflate`, `mesh preview`; unified `build` (one container, edited meshes only);
   live test mod `projects/forge-v1-test` (skin 1061303: body texture hue 150, chest inflate x1.25 on both meshes,
   chest jiggle chains) passes every static/build/package rule and is deployed to `~mods/ZZZ-mrforge-forge-v1-test`.
@@ -30,7 +30,7 @@ pinned tools, facts from the installed game, build -> validate -> package -> dep
 
 ## NEXT ACTION
 
-T41 release v1.0.0, then owner in-game check of the deployed test mod (T42):
+Owner in-game check of the deployed test mod (T42):
 `mrforge check-load forge-v1-test --confirm "<what you saw>"`.
 
 ## Build / run
