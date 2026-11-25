@@ -51,6 +51,9 @@ sk = ui.get_editor_property("skeletal_mesh_import_data")
 sk.set_editor_property("import_morph_targets", True)
 sk.set_editor_property("use_t0_as_ref_pose", False)
 sk.set_editor_property("convert_scene", True)
+# Keep the FBX's normals (they equal vanilla); with the scripted default Unreal recomputed them and seams at the
+# waist, hands and head shaded faceted (measured 2026-11-25: p95 13 deg off vanilla).
+sk.set_editor_property("normal_import_method", unreal.FBXNormalImportMethod.FBXNIM_IMPORT_NORMALS)
 task.set_editor_property("options", ui)
 tools.import_asset_tasks([task])
 mesh = eal.load_asset(job["mesh_path"])

@@ -206,10 +206,19 @@ def _mesh_rule(root: Path, groot: Path, utoc: Path, receipt: dict, changelist: i
         c = verify_against_vanilla(root, groot, utoc, pkg, van, usmap)
         details[pkg] = c
         problems += [f"{Path(pkg).stem}: {p}" for p in c["problems"]]
+    present = [pkg for pkg in pkgs if pkg in details]
+    if present:
+        from .mesh import bind_check
+        try:
+            for pkg, probs in bind_check(root, utoc, present).items():
+                details[pkg]["bind_pose"] = "equal to vanilla" if not probs else probs[:6]
+                problems += [f"{Path(pkg).stem}: bind pose: {p}" for p in probs[:6]]
+        except Exception as e:  # a read-back that cannot run is a failure: an unchecked bind pose deforms in game
+            problems.append(f"bind pose not checked: {getattr(e, 'message', e)}")
     if pkgs and not any(p.endswith("_Lobby.uasset") for p in pkgs):
         warns.append("lobby mesh not built: hero select shows the vanilla model")
     st = "fail" if problems else ("warn" if warns else "pass")
-    return {**_r("V-MESH", st, "; ".join(problems + warns) or f"{len(pkgs)} meshes match vanilla bones, slots and tags",
+    return {**_r("V-MESH", st, "; ".join(problems + warns) or f"{len(pkgs)} meshes match vanilla bones, bind pose, normals, slots and tags",
                  "package"), "meshes": details}
 
 

@@ -34,7 +34,13 @@ How it works (each step verified)
 6. Pack with UAssetTool `create_mod_iostore` (not retoc, which refuses tagged cooks): it converts to the game's
    unversioned layout, pads `FSkeletalMaterial` and injects the slot tags, and strips the user data.
 7. Verify: the mesh is extracted back out of the built mod and read with the game's mappings; bone count, slot
-   names/order and every slot's tags must equal vanilla (rule V-MESH). Placeholders are never packed (V-LEAK).
+   names/order and every slot's tags must equal vanilla. Then it is exported from vanilla + the mod (as the game
+   loads it) and every bone's local position, rotation and scale must equal vanilla, and 95% of the normals must
+   be within 5 degrees (rule V-MESH). Placeholders are never packed (V-LEAK).
+
+Units (fixed in 1.0.1): the FBX is written natively in centimetres with no object scale. Exporting metres put
+scale 100 on the cooked root bone and the game collapsed the mesh onto its bones; putting the conversion in the
+FBX unit factor instead left the bones 100x too small. Normals are imported, not recomputed.
 
 Rules
 - Keep bone names, hierarchy and material slots (names and order). Add geometry to existing slots.

@@ -342,6 +342,34 @@
       "tier": "verified-local",
       "source": "live",
       "date": "2026-11-25"
+    },
+    {
+      "id": "mesh.rootscale",
+      "statement": "Blender FBX export in metres (default options) gives the Unreal-cooked mesh a root bone scale of 100; in game every vertex collapses onto its bone. CUE4Parse/UEFormat ignore bone scale, so the mesh looks right in Blender/FModel.",
+      "tier": "verified-local",
+      "source": "in-game screenshot + UEFormat raw bone read 2026-11-25",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "mesh.fbxunits",
+      "statement": "FBX_SCALE_ALL leaves root scale 1 but bone translations 100x too small (Unreal drops the armature node and ignores the unit factor); scaling the data x100 with scene unit 0.01 gives a bind pose equal to vanilla.",
+      "tier": "verified-local",
+      "source": "live rebuild + read-back",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "mesh.normals",
+      "statement": "Unreal's scripted FBX import recomputed normals (p95 13.5 deg off vanilla); FBXNIM_IMPORT_NORMALS keeps them (p95 0.6 deg).",
+      "tier": "verified-local",
+      "source": "live rebuild + read-back",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "load.texture",
+      "statement": "A forge-built texture mod (hue-shifted body texture, ZZZ- folder) loads and shows in game on build 4066382 (lobby).",
+      "tier": "verified-local",
+      "source": "owner screenshot 2026-11-25",
+      "date": "2026-11-25"
     }
   ]
 }

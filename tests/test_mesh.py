@@ -67,3 +67,42 @@ class MeshCompare(ForgeCase):
         self.assertTrue(compare(v, _summary(["MI_B", "MI_A"], bones)))  # order matters
         self.assertTrue(compare(v, _summary(["MI_A", "MI_B"], [("root", None), ("pelvis", "root"), ("spine", "root")])))
         self.assertTrue(compare(v, _summary(["MI_A", "MI_B"], bones, groups=["root", "Cube"])))
+
+
+class BindPose(ForgeCase):
+    """V-MESH bind pose: a cooked mesh whose bone transforms differ from vanilla deforms in game even when bone
+    names, order, slots and weights match (found 2026-11-25: root bone scale 100 from FBX unit conversion)."""
+    with_game = False
+
+    def _bones(self, root_scale=1.0):
+        return [{"name": "root", "parent": -1, "position": [0, 0, 0], "rotation": [0, 0, 0, 1], "scale": [root_scale] * 3},
+                {"name": "pelvis", "parent": 0, "position": [0, -0.67, 107.5], "rotation": [0.0013, 0.7071, -0.0013, -0.7071],
+                 "scale": [1, 1, 1]}]
+
+    def test_root_scale_detected(self):
+        from mrforge.mesh import compare_bind
+        self.assertEqual(compare_bind(self._bones(), self._bones()), [])
+        probs = compare_bind(self._bones(), self._bones(100.0))
+        self.assertTrue(probs and "root" in probs[0] and "scale" in probs[0], probs)
+
+    def test_sign_flipped_quaternion_is_equal(self):
+        from mrforge.mesh import compare_bind
+        b = self._bones()
+        b[1]["rotation"] = [-x for x in b[1]["rotation"]]
+        self.assertEqual(compare_bind(self._bones(), b), [])
+
+    def test_moved_bone_detected(self):
+        from mrforge.mesh import compare_bind
+        b = self._bones()
+        b[1]["position"] = [0, -0.67, 110.0]
+        self.assertIn("pelvis", compare_bind(self._bones(), b)[0])
+
+
+class Normals(ForgeCase):
+    with_game = False
+
+    def test_threshold(self):
+        from mrforge.mesh import normals_problem
+        self.assertEqual(normals_problem({"p95": 0.61}), [])
+        self.assertTrue(normals_problem({"p95": 13.47}))
+        self.assertTrue(normals_problem({"p95": None}))

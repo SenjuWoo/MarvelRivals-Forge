@@ -1,6 +1,6 @@
 # STATE
 
-Version: 1.0.0 (texture, material, physics and mesh routes; one build for every route)
+Version: 1.0.1 (texture, material, physics and mesh routes; one build for every route; mesh bind-pose fix)
 Updated: 2026-11-25
 Last known-good release: v1.0.0 (tag on 132516c, CI green, published asset re-hashed)
 
@@ -18,12 +18,15 @@ pinned tools, facts from the installed game, build -> validate -> package -> dep
   chest jiggle chains) passes every static/build/package rule and is deployed to `~mods/ZZZ-mrforge-forge-v1-test`.
   Evidence: PLAN.md v1.0.0 table, VALIDATION.md.
 
+- v1.0.1 (T43): first in-game look of v1.0.0's test mod: texture showed (load tier for textures confirmed), mesh
+  collapsed onto its bones. Root cause: cooked root bone scale 100 from FBX units; plus recomputed normals. Fixed
+  (centimetre FBX, imported normals) and V-MESH now checks bind pose + normals read back from the built mod. Fixed
+  test mod redeployed.
+
 ## Not done / not verified
 
-- load / gameplay tiers: no forge-built mod has been looked at in game yet (A1, A3, A11). The test mod is deployed;
-  the installed BodyReshape mods for 1061303 (Vortex `AAE-`/`AAF-` folders) replace the same mesh and texture, so
-  disable them in Vortex for a clean look. Jiggle shows in matches/practice range only (lobby asset has no
-  KawaiiPhysics node).
+- load / gameplay tiers for the fixed mesh and the jiggle chains: waiting for the owner's look at the redeployed
+  test mod (lobby for the mesh; practice range for jiggle, the lobby asset has no KawaiiPhysics node).
 - Lobby jiggle: needs an Unreal-authored AnimBlueprint (KawaiiPhysicsRivals importer is BlueprintCallable); not
   automated.
 - T29 bundle part (companion registry + ai-tooling-stack row) lives in the bundle repository.
@@ -51,3 +54,4 @@ Owner in-game check of the deployed test mod (T42):
 
 - 2026-11-15 planning session; build session T01-T28 (v0.1.0 released), T30-T33 (v0.2.0).
 - 2026-11-25 v1.0.0 session: game patched to 4066382; physics route, inflate/preview, unified build, live test mod.
+- 2026-11-25 owner in-game look: mesh deformed -> v1.0.1 (root-bone scale + normals fixed, V-MESH bind pose).

@@ -200,6 +200,14 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
         from .uebuild import verify_against_vanilla
         mesh_checks = {x["package"]: verify_against_vanilla(root, groot, tr[".utoc"], x["package"], x["vanilla_raw"], usmap)
                        for x in mesh_done}
+        # Bind pose read back from the built mod: names/slots/weights can match while a bone transform does not.
+        from .mesh import bind_check
+        for pkg, probs in bind_check(root, tr[".utoc"], meshes, game_arg).items():
+            c = mesh_checks.setdefault(pkg, {"ok": True, "problems": []})
+            c["bind_pose"] = "equal to vanilla" if not probs else f"{len(probs)} bone transforms differ"
+            if probs:
+                c["problems"] = c["problems"] + [f"bind pose: {x}" for x in probs[:6]]
+                c["ok"] = False
         if not any(p.endswith("_Lobby.uasset") for p in meshes):
             warnings.append("lobby mesh not in this build: hero select shows the vanilla (or another mod's) model")
     tool_names = ["uassettool", "retoc-rivals-cli"] + (["rivals-mesh-material-manager"] if mesh_done else [])

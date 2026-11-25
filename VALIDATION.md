@@ -3,6 +3,21 @@
 Evidence per tier. `static`, `build`, `package` are proven by the forge; `load` and `gameplay` only by an in-game
 look (`mrforge check-load --confirm`). "live" = run on the build machine against the installed game and tools.
 
+## v1.0.1 - 2026-11-25 (mesh fix after the first in-game look)
+
+| Check | Result | How |
+|---|---|---|
+| In-game look at the v1.0.0 test mod | texture **shown** (teal body, lobby); mesh **broken** (collapsed onto bones) | owner screenshot |
+| Root cause | read back from the mod: `root` bone scale 100 (vanilla 1); every other bone, weight, order and shape key equal | UEFormat raw bone read |
+| Fix attempt 1 (FBX_SCALE_ALL) | rejected: root scale 1 but all bone translations 100x too small (V-MESH bind pose fail) | live rebuild |
+| Fix attempt 2 (centimetre data, scene unit 0.01) | bind pose of both meshes equal to vanilla (all bones: position, rotation, scale) | live rebuild + read-back |
+| Normals | recomputed on import: p95 13.5 deg off vanilla; with imported normals p95 0.6 deg | live read-back |
+| Offline suite | pass (83 tests) incl. bind-pose and normals rules | `python tests/run_tests.py` |
+| `mrforge selftest mesh --lobby` | exit 0, both meshes bind pose equal to vanilla, 317 s (read-back adds about 2 min) | live |
+| `mrforge validate` (fixed test mod) | static/build/package pass, V-MESH incl. bind pose + normals, V-PHYS, V-TEX; V-CONFLICT pass (BodyReshape mods disabled) | live |
+| Redeploy | fixed mod in `~mods/ZZZ-mrforge-forge-v1-test` (zip SHA-256 `73480858...a716`) | live |
+| load / gameplay (mesh, jiggle) | **not_run**: owner look pending | owner |
+
 ## v1.0.0 - 2026-11-25, game build 1.1.4066382 (Season 11.0), Unreal Engine 5.3.2, Blender 5.3.0
 
 | Check | Result | How |

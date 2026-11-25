@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.1 - 2026-11-25
+
+Mesh route fix: cooked meshes deformed in game (found by the first in-game look).
+
+- Fixed: every cooked mesh had scale 100 on its root bone. Blender exported metres and Unreal kept the FBX unit
+  factor as a root-bone scale, so the game shrank every vertex onto its bone (stick-figure model in the lobby).
+  The FBX is now written natively in centimetres with no object scale (`to_centimetres` in the Blender helper).
+- Fixed: Unreal recomputed normals on import (faceted seams at waist, hands and head); the import now keeps the
+  FBX normals, which equal vanilla.
+- V-MESH now reads each mesh back out of the built mod as the game loads it and compares every bone's position,
+  rotation and scale with vanilla (bind pose) and the normals (95th percentile within 5 degrees). Both bugs above
+  passed the old rule, which compared only bone count, slot names and tags.
+- Texture and physics routes are unchanged; the texture edit of the test mod showed correctly in game.
+
 ## 1.0.0 - 2026-11-25
 
 Physics route, scripted body-shape edits and one build for every route.

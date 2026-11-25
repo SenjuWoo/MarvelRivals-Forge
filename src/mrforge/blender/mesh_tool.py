@@ -6,6 +6,8 @@ Commands
   summary <in.blend>                                 print bones, material slots, vertex groups, counts
   inflate <in.blend> <spec.json>                     scale the skin around bones by their weights, save in place
   render <in.blend> <out_prefix> [focus_bone]        front + side workbench renders (<prefix>_front.png, _side.png)
+  bones <addon_parent> <file.uemodel>                raw reference-skeleton transforms (position, rotation, scale)
+  normals <addon_parent> <a.uemodel> <b.uemodel>     per-corner normal deviation of b from a (degrees)
 Every command prints one line `MRFORGE_JSON:{...}`.
 """
 import hashlib
@@ -115,6 +117,35 @@ def render(prefix: str, focus: str | None) -> dict:
     return {"renders": out}
 
 
+def to_centimetres() -> None:
+    """Make the scene natively centimetres with no object scale, so the FBX needs no unit conversion at all.
+
+    Unreal drops the FBX armature node and keeps its scale on the root bone: exporting metres with the default
+    options gave the cooked mesh a root bone scale of 100, and the game shrank every vertex onto its bone (seen in
+    game 2026-11-25). Putting the conversion into the file's unit factor instead (FBX_SCALE_ALL) left every bone
+    translation 100x too small. Here the x100 lives in the data itself and the unit factor is 1."""
+    from mathutils import Matrix
+    arms = [o for o in bpy.data.objects if o.type == "ARMATURE"]
+    meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+    scale = Matrix.Scale(100.0, 4)
+    for ob in meshes:
+        world = ob.matrix_world.copy()
+        ob.parent = None
+        ob.matrix_world = world
+    for ob in arms + meshes:
+        ob.matrix_world = scale @ ob.matrix_world
+    bpy.ops.object.select_all(action="DESELECT")
+    for ob in arms + meshes:
+        ob.select_set(True)
+    bpy.context.view_layer.objects.active = (arms or meshes)[0]
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+    for ob in meshes:
+        if arms:
+            ob.parent = arms[0]
+            ob.matrix_parent_inverse = arms[0].matrix_world.inverted()
+    bpy.context.scene.unit_settings.scale_length = 0.01
+
+
 def main(argv):
     cmd = argv[0]
     if cmd == "import":
@@ -161,6 +192,7 @@ def main(argv):
             got = [sl.material.name for sl in ob.material_slots]
             if got != names:
                 raise SystemExit(f"slot names did not apply: {got}")
+        to_centimetres()
         bpy.ops.export_scene.fbx(filepath=argv[2], add_leaf_bones=False, use_selection=False,
                                  object_types={"ARMATURE", "MESH"}, mesh_smooth_type="FACE")
         res = {"fbx": argv[2], **summary()}
@@ -172,6 +204,46 @@ def main(argv):
     elif cmd == "render":
         bpy.ops.wm.open_mainfile(filepath=argv[1])
         res = render(argv[2], argv[3] if len(argv) > 3 else None)
+    elif cmd == "bones":
+        sys.path.insert(0, argv[1])
+        from io_scene_ueformat.importer.archive.reader import FArchiveReader
+        from io_scene_ueformat.importer.import_context import parse_header, parse_body
+        with open(argv[2], "rb") as f:
+            header, body = parse_header(FArchiveReader(f.read()))
+        model = parse_body(header, body)
+        res = {"bones": [{"name": b.name, "parent": int(b.parent_index), "position": [float(x) for x in b.position],
+                          "rotation": [float(x) for x in b.rotation], "scale": [float(x) for x in b.scale]}
+                         for b in model.skeleton.bones]}
+    elif cmd == "normals":
+        import math
+        from mathutils import kdtree
+        sys.path.insert(0, argv[1])
+        import io_scene_ueformat
+        io_scene_ueformat.register()
+
+        def corners(path):
+            bpy.ops.wm.read_factory_settings(use_empty=True)
+            st = bpy.context.scene.uf_settings
+            st.import_sockets = False
+            st.import_virtual_bones = False
+            src = Path(path)
+            bpy.ops.uf.import_uemodel(files=[{"name": src.name}], directory=str(src.parent))
+            me = next(o for o in bpy.data.objects if o.type == "MESH").data
+            return [(me.vertices[lp.vertex_index].co.copy(), lp.normal.copy()) for lp in me.loops]
+        a, b = corners(argv[2]), corners(argv[3])
+        tree = kdtree.KDTree(len(b))
+        for i, (co, _) in enumerate(b):
+            tree.insert(co, i)
+        tree.balance()
+        angles = []
+        for co, n in a[::7]:  # a sample is enough to see recomputed normals (they differ over whole regions)
+            near = [b[j][1].angle(n) for _, j, d in tree.find_n(co, 6) if d < 0.0005]
+            if near:
+                angles.append(math.degrees(min(near)))
+        angles.sort()
+        res = {"samples": len(angles), "median": round(angles[len(angles) // 2], 3) if angles else None,
+               "p95": round(angles[int(len(angles) * 0.95)], 3) if angles else None,
+               "over_20": sum(1 for x in angles if x > 20)}
     elif cmd == "summary":
         bpy.ops.wm.open_mainfile(filepath=argv[1])
         res = summary()

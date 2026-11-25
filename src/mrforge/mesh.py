@@ -256,6 +256,120 @@ def preview(root: Path, focus: str | None = None) -> dict:
     return {"previews": out, "next": "open the PNGs and look at them, then mrforge build"}
 
 
+def compare_bind(vanilla: list[dict], built: list[dict], pos_tol: float = 0.05, rot_tol: float = 1e-3,
+                 scale_tol: float = 1e-3) -> list[str]:
+    """Reference-skeleton transforms of a built mesh vs vanilla (local position cm, rotation quaternion, scale).
+
+    Names, order and weights can all match while a transform differs; the game then deforms the mesh (a root bone
+    scale of 100 shrank every vertex onto its bone). q and -q are the same rotation."""
+    probs = []
+    if [b["name"] for b in vanilla] != [b["name"] for b in built]:
+        return [f"bone names/order differ ({len(built)} built vs {len(vanilla)} vanilla)"]
+    for v, b in zip(vanilla, built):
+        if max(abs(x - y) for x, y in zip(v["scale"], b["scale"])) > scale_tol:
+            probs.append(f"{b['name']}: scale {[round(x, 4) for x in b['scale']]} != vanilla {[round(x, 4) for x in v['scale']]}")
+        if max(abs(x - y) for x, y in zip(v["position"], b["position"])) > pos_tol:
+            probs.append(f"{b['name']}: position {[round(x, 3) for x in b['position']]} != vanilla "
+                         f"{[round(x, 3) for x in v['position']]}")
+        dot = abs(sum(x * y for x, y in zip(v["rotation"], b["rotation"])))
+        if 1.0 - dot > rot_tol:
+            probs.append(f"{b['name']}: rotation differs from vanilla (|dot| {dot:.4f})")
+    return probs
+
+
+def raw_bones(uemodel: Path) -> list[dict]:
+    addon = T.tool_dir(T.require("ueformat-blender"))
+    return run_blender(["bones", str(addon), str(uemodel)])["bones"]
+
+
+def export_from_mod(utoc: Path, packages: list[str], dest: Path, game_arg=None) -> dict:
+    """Export meshes as the game loads them: vanilla containers + this one mod (fmodel-mcp, temporary view)."""
+    groot, _ = find_game(game_arg)
+    usmap = require_usmap(version(groot)["changelist"])
+    key = aes_key()
+    if not key:
+        raise EnvError("AES_KEY_MISSING", "no AES key stored", "run: mrforge sync")
+    T.require("fmodel-mcp")
+    oodle = T.tool_dir(T.entry("uassettool")) / "oo2core_9_win64.dll"
+    out_root = home() / "cache" / "fmcp" / "out"
+    dest.mkdir(parents=True, exist_ok=True)
+    found = {}
+    utoc = Path(utoc)
+    with vanilla_view(groot) as view:
+        md = view / "~mods"
+        md.mkdir()
+        for f in utoc.parent.glob(utoc.stem + ".*"):
+            if f.suffix.lower() in (".utoc", ".ucas", ".pak"):
+                shutil.copyfile(f, md / f.name)
+        cfg = fmcp.write_config(home() / "cache" / "fmcp" / "readback.json", [view, usmap.parent], out_root,
+                                oodle if oodle.is_file() else None)
+        argv = T.argv_for("fmodel-mcp")
+        with fmcp.McpClient(argv + ["--config", str(cfg)], cwd=str(Path(argv[-1]).parent)) as c:
+            c.initialize()
+            sid = c.call("fmodel_open_game", {"options": {"directory": str(view), "game": GAME_PROFILE,
+                                                          "mappingsPath": str(usmap), "aesKeys": {"0" * 32: key}}},
+                         timeout=600)["sessionId"]
+            try:
+                for pkg in packages:
+                    hits = c.call("fmodel_search_assets", {"sessionId": sid, "query": Path(pkg).stem, "packagesOnly": True})
+                    arch = [h.get("archive", "") for h in hits.get("items", []) if h["path"].lower() == pkg.lower()]
+                    if not any(a.lower() == utoc.name.lower() for a in arch):
+                        raise ForgeError("MESH_NOT_IN_MOD", f"{pkg} not found in {utoc.name} (archives {arch})")
+                    job = c.call("fmodel_start_export", {"sessionId": sid, "request": {
+                        "paths": [pkg], "mode": "converted", "meshFormat": "UEFormat", "textureFormat": "Png"}})
+                    st = fmcp.wait_job(c, sid, job["jobId"])
+                    if st["state"] != "completed":
+                        raise ForgeError("MESH_READBACK_FAILED", f"{pkg}: {st['state']} {st.get('error')}")
+                    um = next(Path(st["outputDirectory"]).rglob(Path(pkg).stem + ".uemodel"), None)
+                    if um:
+                        found[pkg] = dest / um.name
+                        shutil.copyfile(um, found[pkg])
+                    shutil.rmtree(Path(st["outputDirectory"]), ignore_errors=True)
+            finally:
+                try:
+                    c.call("fmodel_close_game", {"sessionId": sid}, timeout=60)
+                except ForgeError:
+                    pass
+    return found
+
+
+def bind_check(root: Path, utoc: Path, packages: list[str], game_arg=None) -> dict:
+    """package -> bind-pose problems of the mesh read back from the built mod (empty list = equal to vanilla)."""
+    root = Path(root)
+    exp = load_json(root / "work" / "mesh" / "export.json", {})
+    vanilla = {x["package"]: root / "work" / "mesh" / "vanilla" / x["uemodel"] for x in exp.get("meshes", []) if x.get("uemodel")}
+    built = export_from_mod(utoc, packages, root / "build" / "readback", game_arg)
+    out = {}
+    for pkg in packages:
+        if pkg not in vanilla or not vanilla[pkg].is_file():
+            out[pkg] = ["vanilla .uemodel missing (mrforge mesh export)"]
+        elif pkg not in built:
+            out[pkg] = ["mesh did not export from the built mod"]
+        else:
+            out[pkg] = compare_bind(raw_bones(vanilla[pkg]), raw_bones(built[pkg]))
+            out[pkg] += normals_problem(normal_stats(vanilla[pkg], built[pkg]))
+    return out
+
+
+NORMALS_P95_MAX = 5.0  # degrees; a faithful cook measured 0.6 (quantization), recomputed normals 13.5
+
+
+def normal_stats(vanilla: Path, built: Path) -> dict:
+    addon = T.tool_dir(T.require("ueformat-blender"))
+    return run_blender(["normals", str(addon), str(vanilla), str(built)], timeout=1800)
+
+
+def normals_problem(stats: dict) -> list[str]:
+    """Edits change normals only where geometry moved; a high 95th percentile means the whole mesh was re-shaded."""
+    p95 = stats.get("p95")
+    if p95 is None:
+        return ["normals: no matching vertices between vanilla and the built mesh"]
+    if p95 > NORMALS_P95_MAX:
+        return [f"normals: 95% of corners within {p95} deg of vanilla (max {NORMALS_P95_MAX}): normals were recomputed "
+                "on import, seams shade faceted"]
+    return []
+
+
 def compare(vanilla: dict, current: dict) -> list[str]:
     """Problems that break a cooked mesh's binding to the game's skeleton and materials."""
     problems = []
