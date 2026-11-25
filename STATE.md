@@ -1,8 +1,8 @@
 # STATE
 
-Version: 1.2.0 (sound route without Wwise; v1.2.0 tag held until the owner hears the test sound)
+Version: 1.2.0 (sound route without Wwise; test sound heard in game)
 Updated: 2026-11-25
-Last known-good release: v1.1.0 (tag on 80a3ecf, CI green, published asset re-hashed)
+Last known-good release: v1.2.0 (see the v1.2.0 tag; CI green, published asset re-hashed)
 
 ## Goal
 
@@ -35,18 +35,21 @@ pinned tools, facts from the installed game, build -> validate -> package -> dep
   as v1.1.0.
 - v1.2.0 (T46-T47): sound route (`extract --sounds`, `sound list/replace/reset`, in-place PCM media in the skin's
   Wwise banks, HIRC untouched, V-SND, bank V-CONFLICT, pak-only sound mods). Test mod gets a three-tone beep on
-  primary fire (left_release1..3) and the hero-select hover sound.
+  primary fire (left_release1..3) and the hero-select hover sound. Owner heard the beep in game (check-load
+  recorded, gameplay tier). Released as v1.2.0.
+- Animation research (2026-11-25): per-skin animation assets exist for hero select, hero details, MVP and camera
+  (1061303: Animations/HeroDetails, Mvp, Camera); combat animations are the hero's (1061001) and shared by every
+  skin, except a few rig-changing skins (e.g. 1016502, 1018300) that ship whole sets. Not a route yet.
 
 ## Not done / not verified
 
-- In game: the test beep (hero select hover; practice range primary fire), butt/thigh springs and the in-match
-  chains not yet heard/seen. Tag/release v1.2.0 only after the beep is heard.
+- In game: butt/thigh springs and the in-match chains not yet looked at.
+- Animation route (per-skin lobby/MVP animations through UE 5.3.2 import + cook) not built.
 - T29 bundle part (companion registry + ai-tooling-stack row) lives in the bundle repository.
 
 ## NEXT ACTION
 
-Owner listens: hover the 1061303 skin in hero select (beep instead of the hover sound), fire in the practice range
-(beep on every primary shot). Then `mrforge check-load forge-v1-test --confirm "<what you heard>"` and tag v1.2.0 (T48).
+None required. Optional: owner look at butt/thigh jiggle and in-match chains; an animation route if wanted.
 
 ## Build / run
 
@@ -70,3 +73,4 @@ Owner listens: hover the 1061303 skin in hero select (beep instead of the hover 
 - 2026-11-25 owner: mesh/texture OK in game, no lobby jiggle -> v1.1.0 lobby springs (UE headless, own plugin).
 - 2026-11-25 owner: lobby chest jiggle works -> regions (butt, thighs), weight guard, v1.1.0 released.
 - 2026-11-25 owner: sounds the RoR2 way (no Wwise download) -> v1.2.0 sound route (in-place PCM bank media).
+- 2026-11-25 owner heard the test beep -> v1.2.0 released; animation-per-skin researched (lobby/MVP only).

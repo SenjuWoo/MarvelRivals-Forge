@@ -419,6 +419,20 @@
       "tier": "verified-local",
       "source": "Blender vertex-group weights of the exported lobby mesh",
       "date": "2026-11-25"
+    },
+    {
+      "id": "load.sound",
+      "statement": "PCM media swapped in place into bnk_sfx_1061303 / bnk_display_1061303 (HIRC unchanged) play in game.",
+      "tier": "verified-local",
+      "source": "owner in-game listen 2026-11-25",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "anim.per_skin",
+      "statement": "Per-skin animation assets exist for hero select, hero details, MVP and camera (e.g. 1061303/Animations/HeroDetails, Mvp, Camera); combat animations live under the hero's 1001 skin and are shared by every skin, except a few rig-changing skins (1016502, 1018300) that ship their own sets.",
+      "tier": "verified-local",
+      "source": "package index of build 4066382",
+      "date": "2026-11-25"
     }
   ]
 }

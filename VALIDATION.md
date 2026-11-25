@@ -3,7 +3,7 @@
 Evidence per tier. `static`, `build`, `package` are proven by the forge; `load` and `gameplay` only by an in-game
 look (`mrforge check-load --confirm`). "live" = run on the build machine against the installed game and tools.
 
-## v1.2.0 - 2026-11-25 (sound route; not tagged until the beep is heard)
+## v1.2.0 - 2026-11-25 (sound route)
 
 | Check | Result | How |
 |---|---|---|
@@ -12,7 +12,7 @@ look (`mrforge check-load --confirm`). "live" = run on the build machine against
 | Bank rebuild | unedited rebuild byte-identical on bnk_sfx_1061303, bnk_display_1061303, bnk_ui_battle; one swap reads back clean | live |
 | Offline suite | pass (101 tests) incl. bank format, event map, PCM .wem, extract/replace/build/validate/deploy loop, tampered pak, bank conflict, mixed container | `python tests/run_tests.py` |
 | Live test mod | 3-tone beep on left_release1..3 (9 variations, 6 layers silenced) and display hover (streamed); build 287 s; validate all pass incl. V-SND; redeployed | live |
-| load / gameplay (sound heard) | **not_run**: owner listens in hero select and the practice range | owner |
+| load / gameplay (sound heard) | **pass**: the three-tone beep plays in game | owner, `check-load --tier gameplay` |
 
 ## v1.1.0 - 2026-11-25 (lobby springs)
 
