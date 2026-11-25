@@ -53,6 +53,74 @@ PRESETS = {
 }
 
 
+# Spring-bone jiggle (editor-built route, uepost.py). "reference" = the values a working community lobby-jiggle mod
+# uses (stiffness 80, damping 6, 3 cm); AnimNode_SpringBone moves the bone itself, so springs go on the bones that
+# carry the soft tissue (on 1061: L/R_Breast_01_Jnt and _02_Jnt, L/R_ButtScale).
+SPRING_PRESETS = {
+    "reference": {"stiffness": 80.0, "damping": 6.0, "max_displacement": 3.0},
+    "soft": {"stiffness": 50.0, "damping": 4.0, "max_displacement": 4.0},
+    "firm": {"stiffness": 120.0, "damping": 10.0, "max_displacement": 2.0},
+}
+EDITOR_OPS = ("springs",)
+
+
+def spring_params(preset: str | None, stiffness=None, damping=None, max_displacement=None, rotate=False) -> dict:
+    if preset and preset not in SPRING_PRESETS:
+        raise UsageError(f"unknown spring preset {preset!r}", f"one of: {', '.join(SPRING_PRESETS)}")
+    p = dict(SPRING_PRESETS[preset or "reference"])
+    for k, v in (("stiffness", stiffness), ("damping", damping), ("max_displacement", max_displacement)):
+        if v is not None:
+            if v <= 0:
+                raise UsageError(f"{k} must be > 0")
+            p[k] = float(v)
+    p.update(limit=True, translate=[True, True, True], rotate=[bool(rotate)] * 3)
+    return p
+
+
+def editor_ops(ops: list[dict]) -> list[dict]:
+    return [o for o in ops if o["op"] in EDITOR_OPS]
+
+
+def json_ops(ops: list[dict]) -> list[dict]:
+    return [o for o in ops if o["op"] not in EDITOR_OPS]
+
+
+def verify_springs(d: dict, ops: list[dict]) -> list[str]:
+    """Problems: a requested spring missing from (or different in) the built blueprint, or not feeding the output."""
+    probs = []
+    try:
+        nodes = anim_nodes(d)
+    except ForgeError as e:
+        return [e.message]
+    order = set(eval_order(d))
+    springs = {}
+    for i, n in enumerate(nodes):
+        if n.get("StructType") == "AnimNode_SpringBone":
+            try:
+                bone = child(child(n, "SpringBone"), "BoneName").get("Value")
+            except ForgeError:
+                continue
+            springs[bone] = (i, n)
+    for op in editor_ops(ops):
+        for bone in op["bones"]:
+            if bone not in springs:
+                probs.append(f"spring on {bone} missing")
+                continue
+            i, n = springs[bone]
+            if i not in order:
+                probs.append(f"spring on {bone} does not feed the output pose")
+            for k, field in (("stiffness", "SpringStiffness"), ("damping", "SpringDamping"),
+                             ("max_displacement", "MaxDisplacement")):
+                want = op.get("params", {}).get(k)
+                try:
+                    got = _num(child(n, field).get("Value"))
+                except ForgeError:
+                    got = 0.0  # unversioned zero is omitted
+                if want is not None and abs(float(got) - float(want)) > 1e-3:
+                    probs.append(f"spring {bone}.{field} = {got}, expected {want}")
+    return probs
+
+
 # --- JSON access ----------------------------------------------------------------
 
 def _num(v):
@@ -287,7 +355,7 @@ def load_ops(root: Path) -> dict:
 
 def apply_ops(d: dict, ops: list[dict]) -> list[dict]:
     done = []
-    for op in ops:
+    for op in json_ops(ops):
         if op["op"] == "add_chain":
             done.append(add_chain(d, op["root"], op.get("params", {}), op.get("host")))
         elif op["op"] == "set":
@@ -305,6 +373,9 @@ def apply_ops(d: dict, ops: list[dict]) -> list[dict]:
 def verify(d: dict, ops: list[dict]) -> list[str]:
     """Problems: an op whose result is not in d (d = JSON read back from a built asset)."""
     probs = []
+    ops = json_ops(ops)
+    if not ops:
+        return []
     try:
         chains = select_chains(d)
     except ForgeError as e:
@@ -332,10 +403,22 @@ def verify(d: dict, ops: list[dict]) -> list[str]:
 
 def record(root: Path, lock: dict, asset: str | None, op: dict) -> list[dict]:
     """Validate an op against the current state of each target asset, then store it."""
-    keys = resolve_keys(lock, asset)
+    keys = resolve_keys(lock, asset, editor=op["op"] in EDITOR_OPS)
     ops = load_ops(root)
     out = []
     for key in keys:
+        have = ops["assets"].get(key, [])
+        if (op["op"] in EDITOR_OPS and json_ops(have)) or (op["op"] not in EDITOR_OPS and editor_ops(have)):
+            raise ForgeError("PHYS_ROUTE_MIX", f"{key} already has {'chain' if json_ops(have) else 'spring'} edits",
+                             "one asset is edited either by JSON chains (add-chain/set) or rebuilt with springs; "
+                             f"mrforge phys reset {key} first")
+        if op["op"] in EDITOR_OPS:
+            dup = [b for b in op["bones"] if any(b in o["bones"] for o in editor_ops(have))]
+            if dup:
+                raise ForgeError("PHYS_BONE_ALREADY_SIMULATED", f"springs already on {dup}", f"mrforge phys reset {key}")
+            ops["assets"].setdefault(key, []).append(op)
+            out.append({"asset": key, "result": [{"springs": op["bones"], "params": op["params"]}]})
+            continue
         d = base_json(root, lock, key)
         apply_ops(d, ops["assets"].get(key, []))  # earlier ops first: a bone added before can be tuned now
         res = apply_ops(d, [op])
@@ -345,10 +428,16 @@ def record(root: Path, lock: dict, asset: str | None, op: dict) -> list[dict]:
     return out
 
 
-def resolve_keys(lock: dict, asset: str | None) -> list[str]:
+def resolve_keys(lock: dict, asset: str | None, editor: bool = False) -> list[str]:
     ph = lock.get("physics", {})
     if not ph:
         raise ForgeError("PHYSICS_NOT_EXTRACTED", "no physics asset extracted", "mrforge extract --physics")
+    if not asset and editor:
+        lobby = [k for k in ph if k.endswith("_Lobby_Physics")]
+        if not lobby:
+            raise ForgeError("PHYS_NO_LOBBY_ASSET", "no lobby post-process asset extracted",
+                             "pass --asset Post_<skin>_Physics, or mrforge extract --physics")
+        return lobby
     if not asset:
         with_kawaii = [k for k, v in ph.items() if v.get("kawaii_nodes")]
         if not with_kawaii:

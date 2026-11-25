@@ -99,6 +99,24 @@
       "routes": [
         "mesh-build"
       ]
+    },
+    {
+      "name": "kawaii-physics-rivals",
+      "role": "UE 5.3.2 editor plugin matching the game's KawaiiPhysics schema; its JSON importer rebuilds a game post-process graph for the lobby physics route",
+      "repo": "X-zant/KawaiiPhysicsRivals",
+      "tag": "v2.1.0",
+      "asset": "KawaiiPhysics.zip",
+      "asset_sha256": "ae41b3b5a1a2250a003dfe4e4351c94ee05c099772e8dadf28bc9895e1ea9df7",
+      "exe": "KawaiiPhysics/Binaries/Win64/UnrealEditor-KawaiiPhysicsEd.dll",
+      "exe_sha256": "89886b8702211a6fc8784e87d0223b2afcdbeaa51caa95020edd01e1fbd1c9b6",
+      "license": "MIT",
+      "platform": "windows",
+      "optional": true,
+      "probe": null,
+      "probe_expect": null,
+      "routes": [
+        "physics-lobby"
+      ]
     }
   ]
 }

@@ -173,7 +173,13 @@ def resolve(t: dict, from_dirs: list[Path] | None = None, offline: bool = False,
     if found:
         if target.exists():
             shutil.rmtree(target)
-        shutil.copytree(found, target)
+        parts = Path(t["exe"]).parts
+        if len(parts) > 1:
+            # exe under a package folder (e.g. Plugin/Binaries/...): adopt that folder only. Its parent can be a
+            # whole collection of unrelated tools (it copied 1.6 GB once).
+            shutil.copytree(found / parts[0], target / parts[0])
+        else:
+            shutil.copytree(found, target)
         return {"name": t["name"], "source": "from", "from": str(found), "path": str(exe_path(t))}
     if offline:
         raise EnvError("TOOL_UNAVAILABLE_OFFLINE", f"{t['name']} {t['tag']} is not installed and --offline was given",

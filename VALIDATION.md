@@ -3,6 +3,22 @@
 Evidence per tier. `static`, `build`, `package` are proven by the forge; `load` and `gameplay` only by an in-game
 look (`mrforge check-load --confirm`). "live" = run on the build machine against the installed game and tools.
 
+## v1.1.0 - 2026-11-25 (lobby springs; not tagged until the in-game look)
+
+| Check | Result | How |
+|---|---|---|
+| In-game look at v1.0.1 test mod | lobby: texture and fixed mesh **correct**; no jiggle (chains are in-match only) | owner screenshots |
+| Reference mod analysis | community lobby jiggle = new AnimBlueprint with 12 SpringBone nodes on the lobby skeleton, mesh post-process relinked | retoc manifest + to_json |
+| VS 2022 Build Tools | installed (Microsoft-signed bootstrapper, hash = URL hash); MSVC 14.36/14.38/14.44, SDK 22621/26100; a first copy installed at a wrong path was uninstalled | vswhere |
+| MrforgeAnimTools build | UBT `-CompilerVersion=14.36.32532`: 20 actions, 0 errors, 45 s | live |
+| Lobby blueprint in UE | 32 vanilla nodes, 30 links, 0 skipped types, 4 stubs (not packed), 6 springs, compiled 0 errors | live |
+| Read-back from the mod | CDO NormalExport, 45 anim nodes; Root <- C2L <- 6 springs <- L2C <- vanilla chain; springs' stiffness/damping/displacement equal | live (V-PHYS) |
+| Offline suite | pass (89 tests) incl. springs verify/params/compiler pick/route-mix, setup adoption bug | `python tests/run_tests.py` |
+| `mrforge build` (test mod) | 5 packages (texture, in-match physics, lobby physics, 2 meshes), UAssetTool packer, bind pose equal, 520 s | live |
+| `mrforge validate` (test mod) | static/build/package pass (V-TEX, V-PHYS x2, V-MESH, V-CONFLICT) | live |
+| Redeploy | `~mods/ZZZ-mrforge-forge-v1-test` (zip SHA-256 `3e0178d1...420b`) | live |
+| load / gameplay (springs, chains) | **not_run**: owner look pending | owner |
+
 ## v1.0.1 - 2026-11-25 (mesh fix after the first in-game look)
 
 | Check | Result | How |

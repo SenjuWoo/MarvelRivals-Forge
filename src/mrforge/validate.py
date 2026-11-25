@@ -173,7 +173,7 @@ def _roundtrip(root: Path, m: dict, lk: dict, pkgs: list[str], groot: Path) -> l
                 continue
             try:
                 d = load_json(j)
-                probs = PH.verify(d, all_ops.get(k, []))
+                probs = PH.verify(d, all_ops.get(k, [])) + PH.verify_springs(d, all_ops.get(k, []))
                 info = PH.listing(d)
             except Exception as e:  # an unparsed export is a failure, not a crash
                 probs, info = [f"{getattr(e, 'message', e)}"], {"chains": [], "kawaii_nodes": 0}

@@ -370,6 +370,41 @@
       "tier": "verified-local",
       "source": "owner screenshot 2026-11-25",
       "date": "2026-11-25"
+    },
+    {
+      "id": "physics.lobby_reference",
+      "statement": "A working community lobby-jiggle mod for skin 1061001 adds a new AnimBlueprint (parent AnimInstance, lobby skeleton) with 12 AnimNode_SpringBone nodes (stiffness 80, damping 6, max 3 cm on breast, butt, thigh-twist and hip-fix bones) and points the lobby mesh's post-process at it.",
+      "tier": "verified-local",
+      "source": "retoc manifest + UAssetTool to_json of the installed mod",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.lobby_rebuild",
+      "statement": "UE 5.3.2 + KawaiiPhysicsRivals importer rebuilds Post_1061303_Lobby_Physics from its FModel JSON (32 nodes, 30 links, 0 skipped types); MrforgeAnimTools wires the ends and appends springs; the cooked asset read back with the game's mappings parses (45 anim nodes) with the springs feeding the output.",
+      "tier": "verified-local",
+      "source": "live 2026-11-25",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.lobby_blend",
+      "statement": "The vanilla lobby BlendListByInt index (branch 0 = PoseDriver correctives, 1 = bypass) is set by a curve in an exposed-input function the importer does not rebuild; the rebuilt graph stays on branch 0.",
+      "tier": "verified-local",
+      "source": "read-back comparison",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "ue.toolchain",
+      "statement": "UBT 5.3.2 tested MSVC ranges are 14.34-14.36 (+14.29); it builds editor plugins in the content-only cook project with Build.bat UnrealEditor Win64 Development -Project=... -CompilerVersion=14.36.32532 and Windows SDK 10.0.26100.",
+      "tier": "verified-local",
+      "source": "live UBT build 2026-11-25",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "load.mesh",
+      "statement": "The v1.0.1 mesh fix shows correctly in game (lobby): no deformation, edited chest visible.",
+      "tier": "verified-local",
+      "source": "owner screenshot 2026-11-25",
+      "date": "2026-11-25"
     }
   ]
 }

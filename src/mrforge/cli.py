@@ -390,7 +390,7 @@ def cmd_phys(args, out):
     lk = _lock(root)
     a = args.action
     if a == "presets":
-        return {"presets": PH.PRESETS, "params": sorted(PH.PARAMS)}
+        return {"chain_presets": PH.PRESETS, "chain_params": sorted(PH.PARAMS), "spring_presets": PH.SPRING_PRESETS}
     if a == "list":
         import fnmatch
         res = []
@@ -426,6 +426,16 @@ def cmd_phys(args, out):
                      "Blender, or FModel); a wrong name simulates nothing")
         out.gaps.append("physics runs in game only: jiggle is proven by an in-game look (check-load --confirm)")
         return {"added": done, "next": "mrforge build, then mrforge validate"}
+    if a == "springs":
+        params = PH.spring_params(args.preset, args.stiffness, args.damping, args.max_displacement, args.rotate)
+        done = PH.record(root, lk, args.asset, {"op": "springs", "bones": args.bone, "params": params})
+        names = set()
+        for k in {x["asset"] for x in done}:
+            names |= set(load_json(root / lk["physics"][k]["vanilla_json"]).get("NameMap", []))
+        out.gaps.append("springs are built in Unreal 5.3.2 at mrforge build (needs VS 2022 MSVC v143); the result is "
+                        "proven only by an in-game look")
+        return {"added": done, "note": "the asset is rebuilt from its vanilla graph plus these springs at build time",
+                "next": "mrforge build, then mrforge validate"}
     if a == "set":
         if not (args.bone or args.node):
             raise UsageError("choose chains with --bone <glob> and/or --node <name>", "mrforge phys list shows them")
@@ -706,6 +716,14 @@ def parser() -> argparse.ArgumentParser:
     t.add_argument("--node", help="one KawaiiPhysics node by name")
     t.add_argument("--chain", type=int, help="chain index inside the node")
     t.add_argument("--asset", help="physics asset (default: every extracted asset with KawaiiPhysics nodes)")
+    t = ps.add_parser("springs", description="spring-bone jiggle rebuilt in Unreal (hero select / lobby: no KawaiiPhysics node there)")
+    t.add_argument("--bone", action="append", required=True, help="bone that jiggles, e.g. L_Breast_01_Jnt (repeatable)")
+    t.add_argument("--preset", choices=["reference", "soft", "firm"], default="reference")
+    t.add_argument("--stiffness", type=float, help="spring stiffness (reference 80)")
+    t.add_argument("--damping", type=float, help="spring damping (reference 6)")
+    t.add_argument("--max-displacement", type=float, help="cm the bone may move (reference 3)")
+    t.add_argument("--rotate", action="store_true", help="also spring the rotation (default: translation only)")
+    t.add_argument("--asset", help="post-process asset (default: Post_<skin>_Lobby_Physics)")
     t = ps.add_parser("reset", description="drop physics edits")
     t.add_argument("asset", nargs="?")
     for name, sp in ps.choices.items():

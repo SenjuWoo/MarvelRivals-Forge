@@ -78,10 +78,11 @@ mrforge validate
 | texture | recolor, retexture, logos, decals, skin tone | v0.1 |
 | material | material instance tints, glow, roughness | v0.1 |
 | mesh | body shape, outfit geometry edits (Blender + UE 5.3.2), in-match and lobby meshes; scripted `mesh inflate` | v0.2 |
-| physics | add jiggle chains, tune hair/cloth/tail chains (KawaiiPhysics) in matches | v1.0 |
+| physics | add jiggle chains, tune hair/cloth/tail chains (KawaiiPhysics) in matches; spring-bone jiggle in the lobby / hero select (built headless in UE 5.3.2) | v1.0 / v1.1 |
 
-Limits: lobby (hero select) jiggle needs an AnimBlueprint authored in Unreal and is not automated; load and
-gameplay are proven only by looking in game.
+Lobby jiggle needs Unreal Engine 5.3.2 and Visual Studio 2022 Build Tools (MSVC v143) for the forge's small
+editor plugin; `mrforge doctor` reports the `physics-lobby` route. Load and gameplay are proven only by looking in
+game.
 
 ## Safety
 

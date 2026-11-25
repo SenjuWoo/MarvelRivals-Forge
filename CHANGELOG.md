@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.1.0 - 2026-11-25
+
+Lobby (hero select) jiggle, built headless in Unreal Engine 5.3.2.
+
+- `mrforge phys springs --bone <bone> ... [--preset reference|soft|firm]`: spring-bone jiggle in a post-process
+  AnimBlueprint, by default `Post_<skin>_Lobby_Physics`, which has no KawaiiPhysics node for the chain route.
+  At build time the vanilla graph is rebuilt from its FModel JSON (KawaiiPhysicsRivals importer), the forge's own
+  editor plugin MrforgeAnimTools wires the graph ends and appends the springs before the output, and the blueprint
+  is compiled, cooked and packed at its vanilla path (no mesh relink; the skeleton and importer stubs stay out of
+  the mod). `build` reads it back from the mod (springs present, wired to the output); V-PHYS checks it again.
+- MrforgeAnimTools (C++ editor plugin, source in `src/mrforge/unreal/MrforgeAnimTools`) is built once per source
+  change with UBT pinned to a Visual Studio 2022 MSVC toolset UE 5.3 accepts (14.36 preferred, 14.34-14.38).
+- Pinned KawaiiPhysicsRivals v2.1.0 in `tools.lock.json`; doctor route `physics-lobby`.
+- Fixed: `mrforge setup --from` adopted the whole parent folder for tools whose executable sits under a package
+  folder (it copied a 1.6 GB tool collection); it now adopts that folder only.
+- Behaviour note: a rebuilt lobby graph keeps every vanilla node, but the vanilla BlendListByInt's curve binding is
+  not rebuilt, so its PoseDriver correctives stay on.
+
 ## 1.0.1 - 2026-11-25
 
 Mesh route fix: cooked meshes deformed in game (found by the first in-game look).

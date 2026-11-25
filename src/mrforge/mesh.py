@@ -282,8 +282,11 @@ def raw_bones(uemodel: Path) -> list[dict]:
     return run_blender(["bones", str(addon), str(uemodel)])["bones"]
 
 
-def export_from_mod(utoc: Path, packages: list[str], dest: Path, game_arg=None) -> dict:
-    """Export meshes as the game loads them: vanilla containers + this one mod (fmodel-mcp, temporary view)."""
+def export_from_mod(utoc: Path | None, packages: list[str], dest: Path, game_arg=None, mode: str = "converted",
+                    ext: str = ".uemodel") -> dict:
+    """Export packages as the game loads them: vanilla containers + this one mod (fmodel-mcp, temporary view).
+
+    utoc=None exports vanilla only. mode "converted" gives .uemodel meshes; "properties" gives FModel JSON."""
     groot, _ = find_game(game_arg)
     usmap = require_usmap(version(groot)["changelist"])
     key = aes_key()
@@ -294,13 +297,14 @@ def export_from_mod(utoc: Path, packages: list[str], dest: Path, game_arg=None) 
     out_root = home() / "cache" / "fmcp" / "out"
     dest.mkdir(parents=True, exist_ok=True)
     found = {}
-    utoc = Path(utoc)
+    utoc = Path(utoc) if utoc else None
     with vanilla_view(groot) as view:
-        md = view / "~mods"
-        md.mkdir()
-        for f in utoc.parent.glob(utoc.stem + ".*"):
-            if f.suffix.lower() in (".utoc", ".ucas", ".pak"):
-                shutil.copyfile(f, md / f.name)
+        if utoc:
+            md = view / "~mods"
+            md.mkdir()
+            for f in utoc.parent.glob(utoc.stem + ".*"):
+                if f.suffix.lower() in (".utoc", ".ucas", ".pak"):
+                    shutil.copyfile(f, md / f.name)
         cfg = fmcp.write_config(home() / "cache" / "fmcp" / "readback.json", [view, usmap.parent], out_root,
                                 oodle if oodle.is_file() else None)
         argv = T.argv_for("fmodel-mcp")
@@ -313,14 +317,18 @@ def export_from_mod(utoc: Path, packages: list[str], dest: Path, game_arg=None) 
                 for pkg in packages:
                     hits = c.call("fmodel_search_assets", {"sessionId": sid, "query": Path(pkg).stem, "packagesOnly": True})
                     arch = [h.get("archive", "") for h in hits.get("items", []) if h["path"].lower() == pkg.lower()]
-                    if not any(a.lower() == utoc.name.lower() for a in arch):
+                    if utoc and not any(a.lower() == utoc.name.lower() for a in arch):
                         raise ForgeError("MESH_NOT_IN_MOD", f"{pkg} not found in {utoc.name} (archives {arch})")
-                    job = c.call("fmodel_start_export", {"sessionId": sid, "request": {
-                        "paths": [pkg], "mode": "converted", "meshFormat": "UEFormat", "textureFormat": "Png"}})
+                    if not utoc and not arch:
+                        raise ForgeError("PACKAGE_NOT_IN_BUILD", f"{pkg} not found in the game containers")
+                    req = {"paths": [pkg], "mode": mode}
+                    if mode == "converted":
+                        req.update(meshFormat="UEFormat", textureFormat="Png")
+                    job = c.call("fmodel_start_export", {"sessionId": sid, "request": req})
                     st = fmcp.wait_job(c, sid, job["jobId"])
                     if st["state"] != "completed":
                         raise ForgeError("MESH_READBACK_FAILED", f"{pkg}: {st['state']} {st.get('error')}")
-                    um = next(Path(st["outputDirectory"]).rglob(Path(pkg).stem + ".uemodel"), None)
+                    um = next(Path(st["outputDirectory"]).rglob(Path(pkg).stem + ext), None)
                     if um:
                         found[pkg] = dest / um.name
                         shutil.copyfile(um, found[pkg])

@@ -176,3 +176,79 @@ class MeshChanges(ForgeCase):
             inflate(self.tmp, [], 1.2)
         with self.assertRaises(UsageError):
             inflate(self.tmp, ["spine_04"], 5.0)
+
+
+
+def spring_json(bones=("L_Breast_01_Jnt",), stiffness=80.0, wired=True):
+    """Post-process CDO: input(1) -> L2C(2) -> springs -> C2L -> Root(0), shaped like a cooked spring blueprint."""
+    from helpers import _node, _struct, _f
+    nodes = [None, _node("AnimGraphNode_LinkedInputPose", "AnimNode_LinkedInputPose", "InputPose", -1),
+             _node("AnimGraphNode_LocalToComponentSpace", "AnimNode_ConvertLocalToComponentSpace", "LocalPose", 1)]
+    prev = 2
+    for i, b in enumerate(bones):
+        nodes.append(_node(f"AnimGraphNode_SpringBone_{i}", "AnimNode_SpringBone", "ComponentPose", prev,
+                           [_struct("SpringBone", "BoneReference", [{"Name": "BoneName", "Value": b}]),
+                            _f("SpringStiffness", stiffness), _f("SpringDamping", 6.0), _f("MaxDisplacement", 3.0)]))
+        prev = len(nodes) - 1
+    nodes.append(_node("AnimGraphNode_ComponentToLocalSpace", "AnimNode_ConvertComponentToLocalSpace", "ComponentPose", prev))
+    nodes[0] = _node("AnimGraphNode_Root", "AnimNode_Root", "Result", len(nodes) - 1 if wired else 1)
+    return {"NameMap": list(bones), "Exports": [{"ObjectName": "Post_X_C", "Data": []},
+                                                {"ObjectName": "Default__Post_X_C", "Data": nodes}]}
+
+
+class Springs(ForgeCase):
+    with_game = False
+
+    def _op(self, bones=("L_Breast_01_Jnt",), **kw):
+        return {"op": "springs", "bones": list(bones), "params": PH.spring_params("reference", **kw)}
+
+    def test_verify_springs(self):
+        op = self._op(("L_Breast_01_Jnt", "R_Breast_01_Jnt"))
+        self.assertEqual(PH.verify_springs(spring_json(("L_Breast_01_Jnt", "R_Breast_01_Jnt")), [op]), [])
+        self.assertIn("R_Breast_01_Jnt missing", PH.verify_springs(spring_json(), [op])[0])
+        self.assertIn("SpringStiffness", PH.verify_springs(spring_json(stiffness=50.0), [self._op()])[0])
+        self.assertIn("does not feed", PH.verify_springs(spring_json(wired=False), [self._op()])[0])
+        self.assertEqual(PH.verify(spring_json(), [op]), [])  # chain verifier ignores editor ops
+
+    def test_spring_params(self):
+        p = PH.spring_params("soft", damping=7)
+        self.assertEqual((p["stiffness"], p["damping"], p["max_displacement"]), (50.0, 7.0, 4.0))
+        self.assertEqual(p["rotate"], [False] * 3)
+        with self.assertRaises(UsageError):
+            PH.spring_params("wobbly")
+        with self.assertRaises(UsageError):
+            PH.spring_params(None, stiffness=0)
+
+    def test_compiler_pick_prefers_ue53_tested_toolsets(self):
+        from mrforge.uepost import pick_compiler
+        self.assertEqual(pick_compiler(["14.44.35207", "14.38.33130", "14.36.32532"]), "14.36.32532")
+        self.assertEqual(pick_compiler(["14.44.35207", "14.38.33130"]), "14.38.33130")
+        self.assertIsNone(pick_compiler(["14.44.35207", "14.52.37025"]))
+
+    def test_mesh_for(self):
+        from mrforge.uepost import mesh_for
+        m = {"hero_id": "1061", "skin_id": SKIN}
+        self.assertTrue(mesh_for(f"Post_{SKIN}_Lobby_Physics", m).endswith(f"SK_1061_{SKIN}_Lobby.uasset"))
+        self.assertTrue(mesh_for(f"Post_{SKIN}_Physics", m).endswith(f"SK_1061_{SKIN}.uasset"))
+
+
+class SpringsCli(ForgeCase):
+    def setUp(self):
+        super().setUp()
+        self.ready()
+        code, d = self.cli("new", "Lobby Bounce", "--skin", SKIN, "--kind", "physics", "--out", str(self.tmp / "s"))
+        self.root = Path(d["data"]["project"])
+        self.cli("extract", "--physics", cwd=self.root)
+
+    def test_springs_default_to_lobby_and_refuse_mixing(self):
+        code, d = self.cli("phys", "springs", "--bone", "L_Breast_01_Jnt", "--bone", "R_Breast_01_Jnt", cwd=self.root)
+        self.assertEqual(code, 0, d)
+        self.assertEqual([x["asset"] for x in d["data"]["added"]], [f"Post_{SKIN}_Lobby_Physics"])
+        code, d = self.cli("phys", "springs", "--bone", "L_Breast_01_Jnt", cwd=self.root)
+        self.assertEqual(d["errors"][0]["code"], "PHYS_BONE_ALREADY_SIMULATED")
+        code, d = self.cli("phys", "add-chain", "--root", "X_Jnt", "--asset", f"Post_{SKIN}_Lobby_Physics", cwd=self.root)
+        self.assertEqual(d["errors"][0]["code"], "PHYS_ROUTE_MIX")
+        code, d = self.cli("phys", "add-chain", "--root", "L_Breast_01_Jnt", cwd=self.root)  # in-match asset: fine
+        self.assertEqual(code, 0, d)
+        code, d = self.cli("phys", "springs", "--bone", "Y", "--asset", f"Post_{SKIN}_Physics", cwd=self.root)
+        self.assertEqual(d["errors"][0]["code"], "PHYS_ROUTE_MIX")

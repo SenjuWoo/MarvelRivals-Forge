@@ -1,8 +1,8 @@
 # STATE
 
-Version: 1.0.1 (texture, material, physics and mesh routes; one build for every route; mesh bind-pose fix)
+Version: 1.1.0 (adds lobby spring jiggle built headless in UE 5.3.2; v1.1.0 tag held until the in-game look)
 Updated: 2026-11-25
-Last known-good release: v1.0.0 (tag on 132516c, CI green, published asset re-hashed)
+Last known-good release: v1.0.1 (tag on 5faa5a3, CI green, published asset re-hashed)
 
 ## Goal
 
@@ -23,17 +23,22 @@ pinned tools, facts from the installed game, build -> validate -> package -> dep
   (centimetre FBX, imported normals) and V-MESH now checks bind pose + normals read back from the built mod. Fixed
   test mod redeployed.
 
+- In game (owner, 2026-11-25): v1.0.1 mesh + texture correct in the lobby (load tier confirmed for texture and
+  mesh). No jiggle in the lobby, as expected: the chains were in-match only.
+- v1.1.0 (T44): `phys springs` lobby route: vanilla lobby graph rebuilt in UE 5.3.2 (KawaiiPhysicsRivals importer),
+  MrforgeAnimTools C++ plugin (VS 2022 MSVC 14.36) wires it and appends spring bones, cooked at the vanilla path.
+  Test mod rebuilt with 6 lobby springs (breasts 01/02, butt) + in-match chains; validate all pass; redeployed.
+  VS 2022 Build Tools installed (owner-approved); `setup --from` folder-adoption bug fixed.
+
 ## Not done / not verified
 
-- load / gameplay tiers for the fixed mesh and the jiggle chains: waiting for the owner's look at the redeployed
-  test mod (lobby for the mesh; practice range for jiggle, the lobby asset has no KawaiiPhysics node).
-- Lobby jiggle: needs an Unreal-authored AnimBlueprint (KawaiiPhysicsRivals importer is BlueprintCallable); not
-  automated.
+- Lobby springs and in-match chains in game: owner look pending (hero select for springs, practice range for
+  chains). Tag/release v1.1.0 only after that look.
 - T29 bundle part (companion registry + ai-tooling-stack row) lives in the bundle repository.
 
 ## NEXT ACTION
 
-Owner in-game check of the deployed test mod (T42):
+Owner in-game check of the redeployed test mod (lobby jiggle + practice range), then tag v1.1.0 (T45):
 `mrforge check-load forge-v1-test --confirm "<what you saw>"`.
 
 ## Build / run
@@ -55,3 +60,4 @@ Owner in-game check of the deployed test mod (T42):
 - 2026-11-15 planning session; build session T01-T28 (v0.1.0 released), T30-T33 (v0.2.0).
 - 2026-11-25 v1.0.0 session: game patched to 4066382; physics route, inflate/preview, unified build, live test mod.
 - 2026-11-25 owner in-game look: mesh deformed -> v1.0.1 (root-bone scale + normals fixed, V-MESH bind pose).
+- 2026-11-25 owner: mesh/texture OK in game, no lobby jiggle -> v1.1.0 lobby springs (UE headless, own plugin).

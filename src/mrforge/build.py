@@ -81,6 +81,21 @@ def _readback_physics(staged: Path, usmap: Path, ops: list[dict]) -> list[str]:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def _readback_from_mod(root: Path, groot, utoc: Path, pkg: str, usmap: Path, check) -> list[str]:
+    from .game import layout
+    from .uat import extract_vanilla, pattern_for
+    tmp = Path(tempfile.mkdtemp(prefix="mrf-post-"))
+    try:
+        extract_vanilla(layout(groot)["paks_dir"], tmp / "raw", [pattern_for(pkg)], mod=str(utoc))
+        r = run_tool("uassettool", ["to_json", fwd(tmp / "raw" / pkg), fwd(usmap), fwd(tmp / "json")], timeout=600)
+        j = tmp / "json" / (Path(pkg).stem + ".json")
+        if r["rc"] != 0 or not j.is_file():
+            return ["not readable from the built mod"]
+        return check(load_json(j))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
     root = Path(root).resolve()  # UnrealEditor runs with its own working directory
     m = P.manifest(root)
@@ -97,8 +112,11 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
     if not (tex_changed or mat_changed or phys_changed or meshes):
         raise ForgeError("NOTHING_TO_BUILD", "no texture, material, physics asset or mesh differs from vanilla",
                          "edit something first: mrforge tex ... / mat set ... / phys add-chain ... / edit a .blend")
+    all_ops = PH.load_ops(root)["assets"]
+    phys_ue = [k for k in phys_changed if PH.editor_ops(all_ops.get(k, []))]
+    phys_json = [k for k in phys_changed if k not in phys_ue]
     groot = cl = None
-    if meshes or not lk.get("changelist"):
+    if meshes or phys_ue or not lk.get("changelist"):
         from .game import find_game, version
         groot, _ = find_game(game_arg)
         cl = version(groot)["changelist"]
@@ -146,8 +164,7 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
         routes.append("material")
     pjson = root / "build" / "physics"
     phys_checks = {}
-    all_ops = PH.load_ops(root)["assets"]
-    for key in phys_changed:
+    for key in phys_json:
         rec = lk["physics"][key]
         d = PH.apply(root, lk, key)
         jp = pjson / f"{key}.json"
@@ -176,12 +193,21 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
         for pkg in meshes:
             b = root / "work" / "mesh" / (Path(pkg).stem + ".blend")
             inputs[P.rel_project(root, b)] = sha256_file(b)
+    post_done = []
+    if phys_ue:
+        from .uepost import build_postprocess
+        for key in phys_ue:
+            rec = lk["physics"][key]
+            post_done.append(build_postprocess(root, groot, key, rec, all_ops[key], usmap, stage, game_arg))
+            staged.append(rec["package"])
+        if "physics" not in routes:
+            routes.append("physics")
     dist = root / "dist"
     dist.mkdir(exist_ok=True)
     tr = triple(root, m)
     for f in tr.values():
         f.unlink(missing_ok=True)
-    if mesh_done:
+    if mesh_done or post_done:
         packer = "uassettool"
         uassets = sorted(f for f in iter_files(stage) if f.suffix == ".uasset")
         r = run_tool("uassettool", ["create_mod_iostore", fwd(dist / f"{m['pak_name']}{SUFFIX}"), *[fwd(f) for f in uassets]],
@@ -195,6 +221,15 @@ def run(root: Path, game_arg=None, force_meshes: bool = False) -> dict:
     if not ok or missing:
         raise ForgeError("PACK_FAILED", f"{packer}: {(r['stdout'] + r['stderr']).strip()[-500:]} missing={missing}",
                          "run mrforge doctor; inspect build/stage")
+    for x in post_done:
+        # The cooked blueprint read back out of the built mod with the game's mappings: springs present and wired.
+        probs = _readback_from_mod(root, groot, tr[".utoc"], lk["physics"][x["asset"]]["package"], usmap,
+                                   lambda d, k=x["asset"]: PH.verify_springs(d, all_ops[k]))
+        if probs:
+            raise ForgeError("PHYS_READBACK_FAILED", f"{x['asset']}: {'; '.join(probs[:6])}",
+                             "see build/postprocess/<asset>/ue_report.json")
+        phys_checks[x["asset"]] = {"ok": True, "route": "editor", "springs": x["springs"],
+                                   "vanilla_nodes": x["vanilla_nodes"], "note": x["behaviour_note"]}
     mesh_checks = {}
     if mesh_done:
         from .uebuild import verify_against_vanilla

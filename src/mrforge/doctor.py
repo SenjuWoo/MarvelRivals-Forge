@@ -164,6 +164,12 @@ def route_checks(tool_state: dict, data_state: dict) -> list[dict]:
                 "release": "v0.2"})
     out.append({"route": "physics", "status": "available" if tex else "unavailable",
                 "needs": "same as texture (UAssetTool to_json/from_json on Post_<skin>_Physics)", "release": "v1.0"})
+    from .uepost import msvc_toolsets, pick_compiler
+    msvc = pick_compiler(msvc_toolsets())
+    pl = bool(ue["found"] and mx and msvc and tool_state.get("kawaii-physics-rivals") and tool_state.get("uassettool"))
+    out.append({"route": "physics-lobby", "status": "available" if pl else "unavailable",
+                "needs": "mesh-export + Unreal Engine 5.3.2 + Visual Studio 2022 MSVC v143 (14.34-14.38) + kawaii-physics-rivals",
+                "msvc": msvc or "no VS 2022 MSVC 14.34-14.38", "release": "v1.1"})
     return out
 
 

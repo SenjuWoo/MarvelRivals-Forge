@@ -197,6 +197,26 @@ class Tools(ForgeCase):
         r = setup(lk=lk, from_dirs=[str(self.tmp / "collection")], offline=True)
         self.assertEqual(r["tools"][0]["source"], "from")
 
+    def test_adopt_plugin_folder_only(self):
+        """A lock exe under a plugin folder (Plugin/Binaries/...) adopts that folder, never its siblings (found
+        2026-11-25: --from copied a whole 1.6 GB tool collection)."""
+        from mrforge.tools import setup, tool_dir
+        a = self.tmp / "demo.zip"
+        _zip(a, {"Plug/Binaries/demo.dll": b"DLL"})
+        coll = self.tmp / "collection"
+        (coll / "Plug" / "Binaries").mkdir(parents=True)
+        (coll / "Plug" / "Binaries" / "demo.dll").write_bytes(b"DLL")
+        (coll / "Plug" / "Plug.uplugin").write_text("{}")
+        (coll / "UnrelatedTool").mkdir()
+        (coll / "UnrelatedTool" / "big.bin").write_bytes(b"X")
+        lk = self._lock(a, b"DLL", url="file:///nonexistent")
+        lk["tools"][0]["exe"] = "Plug/Binaries/demo.dll"
+        r = setup(lk=lk, from_dirs=[str(coll)], offline=True)
+        self.assertEqual(r["tools"][0]["source"], "from", r)
+        d = tool_dir(lk["tools"][0])
+        self.assertTrue((d / "Plug" / "Plug.uplugin").is_file())
+        self.assertEqual(sorted(p.name for p in d.iterdir()), ["Plug"])
+
     def test_unsafe_archive(self):
         from mrforge.tools import setup
         a = self.tmp / "demo.zip"

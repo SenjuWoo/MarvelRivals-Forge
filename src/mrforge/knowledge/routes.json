@@ -167,7 +167,7 @@
     },
     {
       "id": "physics",
-      "summary": "Jiggle, hair, cloth and tail physics: add KawaiiPhysics chains (e.g. chest jiggle) or tune existing ones in the skin's post-process AnimBlueprint. No Unreal Editor needed.",
+      "summary": "Jiggle, hair, cloth and tail physics: add KawaiiPhysics chains or tune existing ones in matches (no editor), and spring-bone jiggle in the lobby / hero select (built headless in Unreal 5.3.2).",
       "release": "v1.0",
       "keywords": [
         "physics",
@@ -187,11 +187,12 @@
         "softer"
       ],
       "commands": [
-        "mrforge doctor   (route physics must be available)",
+        "mrforge doctor   (routes physics, and physics-lobby for hero-select springs)",
         "mrforge new \"<Mod Name>\" --skin <skinId> --kind physics",
         "cd <project>; mrforge extract --physics",
         "mrforge phys list   (nodes, chains, root bones, parameters)",
-        "mrforge phys add-chain --root L_Breast_01_Jnt --root R_Breast_01_Jnt --preset jiggle",
+        "mrforge phys add-chain --root L_Breast_01_Jnt --root R_Breast_01_Jnt --preset jiggle   (in matches)",
+        "mrforge phys springs --bone L_Breast_01_Jnt --bone L_Breast_02_Jnt --bone R_Breast_01_Jnt --bone R_Breast_02_Jnt   (lobby)",
         "mrforge phys set Damping 0.25 --bone \"*hair*\"   (tune existing chains)",
         "mrforge build",
         "mrforge validate",
@@ -205,7 +206,7 @@
       ],
       "avoid": [
         "guessing bone names (check them in Blender after mesh export/blend)",
-        "expecting lobby jiggle: lobby post-process assets often have no KawaiiPhysics node",
+        "chains and springs on the same asset (one route per asset)",
         "obfuscate/strip/encrypt options"
       ]
     },

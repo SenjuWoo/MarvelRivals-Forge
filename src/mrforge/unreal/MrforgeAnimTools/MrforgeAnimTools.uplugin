@@ -1,0 +1,18 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "MarvelRivals-Forge Anim Tools",
+	"Description": "Headless AnimBlueprint graph helpers for MarvelRivals-Forge: wire graph ends, append spring-bone jiggle nodes, compile.",
+	"Category": "Editor",
+	"CreatedBy": "MarvelRivals-Forge",
+	"CanContainContent": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "MrforgeAnimTools",
+			"Type": "Editor",
+			"LoadingPhase": "Default"
+		}
+	]
+}

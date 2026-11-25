@@ -44,9 +44,22 @@ Finding bones
   female skins: `L_Breast_01_Jnt` -> `L_Breast_02_Jnt` (and `R_`), `L_ButtScale`/`R_ButtScale`, `thigh_muscle_*`.
 - `add-chain` warns when the bone name is not in the asset's name map; a wrong name simulates nothing.
 
-Limits
+Lobby / hero select: springs (v1.1, Unreal 5.3.2 headless)
 - Lobby assets can have no KawaiiPhysics node at all (1061303's lobby asset has 34 nodes, none KawaiiPhysics), so
-  chains cannot be added there; hero-select jiggle needs an AnimBlueprint authored in Unreal with the
-  KawaiiPhysicsRivals plugin (its importer rebuilds a game graph from JSON). Not automated yet.
+  `add-chain` cannot extend them. `mrforge phys springs --bone <bone> ...` records spring-bone jiggle instead
+  (presets reference = stiffness 80, damping 6, 3 cm, the values of a working community lobby mod; soft; firm).
+- At `mrforge build`: the vanilla blueprint is exported as FModel JSON and its mesh's skeleton as FBX (game
+  containers only); UE 5.3.2 imports the skeleton, creates the blueprint at the vanilla path, rebuilds every vanilla
+  node with the KawaiiPhysicsRivals importer (the build fails if it skips a node type), and the forge's
+  MrforgeAnimTools plugin links Input Pose to the open inputs, appends the springs (space conversions inserted by
+  the anim schema) and connects the last one to Output Pose, then compiles. Only the cooked blueprint is packed.
+- `build` and V-PHYS read the blueprint back out of the mod with the game's mappings: every spring present, with its
+  stiffness/damping/displacement, and on the path to the output pose.
+- Requires doctor route `physics-lobby`: Unreal 5.3.2, Visual Studio 2022 Build Tools with an MSVC v143 toolset
+  UE 5.3 accepts (14.36 preferred; 14.34-14.38), kawaii-physics-rivals (`mrforge setup`).
+- Behaviour change: the vanilla BlendListByInt is driven by a curve the importer does not rebuild, so the PoseDriver
+  correctives stay on. One asset is edited either with chains (JSON) or rebuilt with springs, not both.
+
+Limits
 - A chain that runs after a rivet leaves rivet-driven accessories following the un-jiggled pose.
 - Installed mods that replace the same `Post_*` asset win or lose by load order; V-CONFLICT names them.

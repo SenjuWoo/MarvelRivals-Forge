@@ -35,7 +35,8 @@ def project_dir() -> Path:
     return home() / "ue" / "Marvel"
 
 
-def init_project(tags: list[str] | None = None) -> Path:
+def init_project(tags: list[str] | None = None, anim: bool = False) -> Path:
+    """Generated cook project. anim=True also enables KawaiiPhysicsRivals and MrforgeAnimTools (built by uepost)."""
     d = project_dir()
     (d / "Config").mkdir(parents=True, exist_ok=True)
     (d / "Content").mkdir(exist_ok=True)
@@ -48,6 +49,11 @@ def init_project(tags: list[str] | None = None) -> Path:
             shutil.rmtree(dst)
         shutil.copytree(src, dst)
     up["Plugins"].append({"Name": "RivalsMeshMaterialManager", "Enabled": True})
+    for name in ("KawaiiPhysics", "MrforgeAnimTools"):
+        # Project plugins load by default when present; list them explicitly either way so a mesh-only cook never
+        # depends on plugins that may not be built on this machine.
+        if (d / "Plugins" / name).is_dir():
+            up["Plugins"].append({"Name": name, "Enabled": bool(anim)})
     (d / "Marvel.uproject").write_text(json.dumps(up, indent=2), encoding="utf-8")
     (d / "Config" / "DefaultEngine.ini").write_text(ENGINE_INI, encoding="utf-8")
     (d / "Config" / "DefaultGame.ini").write_text(GAME_INI, encoding="utf-8")
