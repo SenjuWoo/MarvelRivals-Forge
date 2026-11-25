@@ -56,7 +56,33 @@ Rules for the builder
 | T31 | v0.2 Blender leg: `mrforge mesh blend` (headless: add the ueformat-blender folder to `sys.path`, `register()`, `bpy.ops.uf.import_uemodel(files=[{"name": ...}], directory=...)`, save `.blend`), `mesh fbx` (`add_leaf_bones=False`), `mesh check` (bone names and hierarchy equal vanilla, material slot names and order equal vanilla, vertex groups are bones, triangle count) | done | T30 | live: LOD0 of `SK_1061_1061303` imports as 81410 vertices, 488 bones, 18 material slots; `mesh check` passes on the unmodified round trip and fails after a slot is renamed | live: 95,767 vertices, 488 bones, 18 slots (vanilla; the planning figure 81,410 was the override mod's mesh); check passes on the round trip, fails after renaming a slot; FBX 10.8 MB |
 | T32 | v0.2 UE spike (needs UE 5.3.2, see Open questions): detect 5.3.2; `mrforge ue init` creates a project named exactly `Marvel` with IoStore off and plugins KawaiiPhysicsRivals `v2.1.0` and RivalsMeshMaterialManager `v1.2.0`; headless Python import of the FBX to the vanilla package path bound to placeholder Skeleton and material assets at the vanilla paths; headless cook; collect `Saved/Cooked/Windows/Marvel/Content/...` minus placeholders; `retoc-rivals-cli pack` (with hidden-material patching if the vanilla mesh has hidden slots); `mrforge validate`; owner checks in game. Write every verified step and failure into `knowledge/mesh-route.md` and `facts.json` | done | T31, owner installs UE 5.3.2 | live: the cooked, packed mesh passes `validate` and the owner confirms it renders in lobby and match; otherwise `blocked` at the exact failing step with its output | done with route changes: versioned cook (unversioned stock cook is misread with the game's mappings), UAssetTool create_mod_iostore as mesh packer (retoc refuses tagged cooks), RivalsMeshMaterialManager user data for slot tags, sockets off in Blender, unique per-slot FBX materials, armature named Armature. Package tier verified; in-game check pending (owner) |
 | T33 | v0.2 productize: `mrforge mesh build`, rules `V-MESH` (no skeleton/physics leak, material tags equal vanilla `skeletal_mesh_info`, lobby mesh paired), `selftest mesh`, route docs, release `v0.2.0` by the T27/T28 procedure | done | T32 | selftest mesh passes live; CI green; release verified | `mesh build`, V-MESH, `selftest mesh [--lobby]` pass live; docs; v0.2.0 release by the T27/T28 procedure |
-| T34 | Optional v0.2.x physics route: wrappers over `retoc-rivals-cli fix-kawaii-physics` and `--kawaii-options-json` with a tuning JSON per skin | pending | T33 | live: tuned physics asset passes `validate`; owner confirms in game | - |
+| T34 | Optional v0.2.x physics route: wrappers over `retoc-rivals-cli fix-kawaii-physics` and `--kawaii-options-json` with a tuning JSON per skin | superseded by T36 | T33 | - | retoc's Kawaii porter converts stock-plugin cooks; vanilla Post_*_Physics is already in the game schema, so the route edits it directly (D23) |
+
+### v1.0.0 (planned 2026-11-25 against game build 1.1.4066382)
+
+| ID | Task | Status | Depends on | Verify | Evidence |
+|---|---|---|---|---|---|
+| T35 | Refresh for game build 4066382: `sync`, `index`, upstream tool releases checked | pending | - | `cmd:mrforge doctor` exit 0, usmap+index ok | - |
+| T36 | Physics route (editor-free): `extract --physics`, `phys list/set/add-chain/reset/presets`, ops in `work/phys_ops.json`, build via `from_json` with an immediate read-back, `V-PHYS`, V-LEAK allows edited `Post_*_Physics` | pending | T35 | `cmd:python tests/run_tests.py` green incl. phys tests | - |
+| T37 | Body-shape op: `mrforge mesh inflate --bone <b> --factor <f>` (headless Blender, weight-driven, shape keys kept) | pending | T35 | `cmd:mrforge mesh inflate` live on the test project, then `mesh check` passes | - |
+| T38 | One build for every route: `mrforge build` stages textures, materials, physics and changed meshes into one container (UAssetTool packer when meshes are present, retoc otherwise); `mesh build` = build with all meshes | pending | T36, T37 | `cmd:python tests/run_tests.py`; live combined build | - |
+| T39 | Live end-to-end test mod on skin 1061303: body texture hue + chest inflate (game + lobby) + chest jiggle chains; build, validate (all package rules), package, deploy; `selftest physics` | pending | T38 | `cmd:mrforge validate` (project forge-v1-test) static/build/package pass; `cmd:mrforge selftest physics` exit 0 | - |
+| T40 | Docs + version 1.0.0: routes/plan/doctor physics available, physics-route.md, facts, README, AGENTS, SKILL, CHANGELOG, DECISIONS, VALIDATION, STATE | pending | T39 | `cmd:python tests/run_tests.py` (version mirrors, no machine paths) | - |
+| T41 | Release v1.0.0: push main, CI green on the SHA, alerts 0, tag, release with build_release assets, re-hash the download; reinstall launcher + skill; doctor | pending | T40 | `cmd:gh run list` green on the tagged SHA; downloaded asset SHA-256 equals local | - |
+| T42 | In-game check (load tier): owner opens the test mod in practice range (jiggle is in-match only) and lobby | pending (owner) | T39 | `cmd:mrforge check-load --confirm "<note>"` | - |
+
+Decisions (v1.0.0)
+- D23 Physics edits go into the vanilla `Post_<skin>_Physics` AnimBlueprint by JSON (UAssetTool to_json/from_json), appending `Chains[]` entries to an existing KawaiiPhysics node; the anim graph is not touched. Rejected: authoring a new AnimBP in Unreal (drops the vanilla pose drivers/rivets unless re-imported; graph wiring is not scriptable headless), adding graph nodes by JSON (class layout and node data tables would have to be rebuilt).
+- D24 The new chain's host is the KawaiiPhysics node evaluated last (pose-link order), so it runs after the constraint/rivet nodes that write the same bones.
+- D25 Only inner struct headers are dropped when a zero field becomes non-zero; dropping the node-level header corrupts the export (verified).
+- D26 One container per mod: when a build includes cooked meshes, UAssetTool `create_mod_iostore` packs everything (verified with texture + physics legacy assets); otherwise retoc as before.
+
+Assumptions (v1.0.0)
+- A11 The game runs KawaiiPhysics `Chains[1..]` added to a vanilla node (the game's own data already uses up to 11 chains per node). Check: T42.
+- A12 The lobby `Post_<skin>_Lobby_Physics` has no KawaiiPhysics node for 1061303, so lobby jiggle needs an authored AnimBP (out of v1.0 scope; reported as a gap).
+
+Risks (v1.0.0)
+- A chain that runs after a rivet leaves rivet-driven accessories (e.g. a chest bow) following the un-jiggled pose; visible only in motion.
 
 ## Architecture
 

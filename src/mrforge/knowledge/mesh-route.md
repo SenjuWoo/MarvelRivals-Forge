@@ -1,4 +1,4 @@
-# Mesh route (v0.2): body shape, outfit edits, new geometry
+# Mesh route: body shape, outfit edits, new geometry
 
 Verified end to end at the package tier on build 4042190 (skin 1061303, in-match + lobby meshes). In-game load is
 still owner-observed: deploy, look in the lobby and in a match, then `mrforge check-load --confirm`.
@@ -10,8 +10,10 @@ cd projects/body-edit
 mrforge mesh export --lobby            # vanilla .uemodel + materials + PNG (lobby mesh too)
 mrforge mesh blend                     # work/mesh/SK_<hero>_<skin>.blend (+ _Lobby.blend)
 # edit the .blend files in Blender: sculpt/move vertices, keep bones, weights and material slots
+mrforge mesh inflate --bone L_Breast_01_Jnt --bone R_Breast_01_Jnt --factor 1.2   # optional scripted edit
+mrforge mesh preview                   # build/preview/<mesh>.png: vanilla | edited, front and side: look at it
 mrforge mesh check                     # bones, hierarchy, slot names/order, vertex groups vs vanilla
-mrforge mesh build                     # Unreal 5.3.2 import + cook, UAssetTool pack, verify vs vanilla
+mrforge build                          # cooks edited meshes (Unreal 5.3.2) + any texture/material/physics edits
 mrforge validate && mrforge package
 ```
 
@@ -39,4 +41,13 @@ Rules
 - Edit both meshes when the change should show in hero select too; otherwise the lobby shows vanilla (V-MESH warns).
 - A skin's body mesh may already be replaced by an installed mod; V-CONFLICT names it. Disable it to see yours.
 
-Physics (jiggle/cloth) is not covered yet; `retoc-rivals-cli fix-kawaii-physics` is the planned base.
+Body-shape op: `mesh inflate` moves each vertex away from (factor > 1) or toward (< 1) the bone's head by
+`(factor - 1) x weight`, where weight is the vertex's weight on the bone and its children. Bones, weights, slots
+and shape-key deltas stay as they are, so `mesh check` passes. Every edit is logged in `work/mesh/edits.json`;
+`mesh blend --force` re-imports vanilla.
+
+One container: `mrforge build` puts edited meshes and any texture, material and physics edits into one mod (packed
+with UAssetTool when meshes are present). It cooks only meshes whose `.blend` differs from the import;
+`mrforge mesh build` cooks every exported mesh (unchanged round trip, used by `selftest mesh`).
+
+Physics (jiggle/cloth): see `mrforge knowledge physics-route`.

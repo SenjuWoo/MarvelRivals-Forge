@@ -61,7 +61,7 @@ def write_pkg(out_root, path, meta, files_b64=None):
                                                             "w": meta["w"], "h": meta["h"]}), encoding="utf-8")
         stem.with_suffix(".uexp").write_bytes(png_bytes(meta["w"], meta["h"], meta.get("color", [200, 120, 100])))
         stem.with_suffix(".ubulk").write_bytes(b"bulk")
-    elif kind == "material":
+    elif kind in ("material", "json"):
         stem.with_suffix(".uasset").write_text(json.dumps({"kind": "material"}), encoding="utf-8")
         stem.with_suffix(".uexp").write_text(json.dumps(meta["json"]), encoding="utf-8")
     else:

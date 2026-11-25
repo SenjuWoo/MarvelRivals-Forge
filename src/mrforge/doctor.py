@@ -162,7 +162,8 @@ def route_checks(tool_state: dict, data_state: dict) -> list[dict]:
     out.append({"route": "mesh-build", "status": "available" if mb else "unavailable",
                 "needs": "mesh-export + Unreal Engine 5.3.2 + rivals-mesh-material-manager + uassettool", "ue": ue,
                 "release": "v0.2"})
-    out.append({"route": "physics", "status": "unavailable", "needs": "planned after v0.2", "release": "later"})
+    out.append({"route": "physics", "status": "available" if tex else "unavailable",
+                "needs": "same as texture (UAssetTool to_json/from_json on Post_<skin>_Physics)", "release": "v1.0"})
     return out
 
 

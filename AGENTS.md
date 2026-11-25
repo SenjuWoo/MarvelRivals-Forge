@@ -20,12 +20,14 @@ Not installed? `mrforge.cmd <command>` runs from the checkout, or run `Install.p
 ```
 mrforge plan "<what the user asked for>"      # route + exact commands
 mrforge skin find "<name>"  |  mrforge skin inspect <skinId>
-mrforge new "<Mod Name>" --skin <skinId> --kind texture[,material]
+mrforge new "<Mod Name>" --skin <skinId> --kind texture[,material,physics,mesh]
 cd <project>
-mrforge extract --textures "<glob>" | --materials | --all
-mrforge tex ... / mrforge mat set ...
-mrforge tex sheet            # LOOK at build/preview/sheet.png before building
-mrforge build
+mrforge extract --textures "<glob>" | --materials | --physics | --all
+mrforge mesh export --lobby && mrforge mesh blend          # mesh kind
+mrforge tex ... / mrforge mat set ... / mrforge phys add-chain|set ... / mrforge mesh inflate ... (or Blender)
+mrforge tex sheet / mrforge mesh preview   # LOOK at build/preview/*.png before building
+mrforge mesh check                         # mesh kind
+mrforge build                              # one container for every edit
 mrforge validate             # static/build/package tiers; fix every fail
 mrforge package              # zip for a mod manager
 mrforge deploy               # only when the user wants it in game
@@ -41,15 +43,17 @@ mrforge check-load           # after the user looked in game; --confirm "<what t
 | Verified facts with tier and source | `mrforge facts [--grep x]` |
 | How a route works | `mrforge knowledge <topic>` |
 | Tool versions and hashes | `tools.lock.json` |
-| A project's state | `<project>/mrforge.json`, `vanilla.lock.json`, `work/ops.json`, `work/mat_ops.json`, `dist/receipt.json` |
+| A project's state | `<project>/mrforge.json`, `vanilla.lock.json`, `work/ops.json`, `work/mat_ops.json`, `work/phys_ops.json`, `work/mesh/edits.json`, `dist/receipt.json` |
 
 ## Module map (`src/mrforge/`)
 
 cli (parser, JSON contract) - home (forge home, config, log) - game (Steam discovery, build, loader) - tools
 (lock, setup, run) - sync (usmap, key) - index (vanilla listing) - catalog (names) - skin (inspect) - mods
-(installed mods, conflicts) - project (new, bump) - extract - tex (Pillow ops) - mat (material JSON) - build -
+(installed mods, conflicts) - project (new, bump) - extract - tex (Pillow ops) - mat (material JSON) - phys (KawaiiPhysics chains in Post_*_Physics JSON) - build (every route,
+one container) -
 validate - package - deploy - checkload - selftest - doctor - knowledge (facts, routes, plan) - ue (UE 5.3.2
-detection) - uat (UAssetTool output parsers).
+detection) - uat (UAssetTool output parsers) - mesh (export, Blender, inflate, preview, check) - uebuild (UE import +
+cook) - fmcp (fmodel-mcp client) - blender/mesh_tool.py, unreal/import_mesh.py (headless scripts).
 
 ## Boundaries
 

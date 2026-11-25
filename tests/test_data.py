@@ -63,11 +63,16 @@ class Knowledge(ForgeCase):
             "remove the jacket mesh": "mesh",
             "add jiggle physics": "physics",
             "more cloth sway on the skirt physics": "physics",
+            "make her boobs bounce": "physics",
+            "softer hair physics": "physics",
             "replace voice lines": "unsupported",
             "change ability cooldown": "unsupported",
         }
         bad = {req: plan(req)["route"] for req, want in table.items() if plan(req)["route"] != want}
         self.assertEqual(bad, {})
+        both = plan("make her chest bigger and add jiggle")
+        self.assertEqual(both["combine"]["routes"], ["mesh", "physics"])
+        self.assertNotIn("combine", plan("make the eyes glow stronger"))
         self.assertGreaterEqual(len(table), 12)
 
 
@@ -118,7 +123,7 @@ class Index(ForgeCase):
         build(self.paks, CL)
         idx = load(CL)
         pk = skin_packages(idx, SKIN)
-        self.assertEqual(len(pk), 8)
+        self.assertEqual(len(pk), 9)  # incl. the lobby post-process asset
         self.assertTrue(exists(idx, f"/Game/Marvel/Characters/1061/{SKIN}/Textures/T_{SKIN}_Body_01_D"))
         self.assertEqual(classify(f"x/{SKIN}/Post_{SKIN}_Physics.uasset"), "physics")
         self.assertEqual(classify("x/Meshes/SK_1061_1061303_Skeleton.uasset"), "skeleton")

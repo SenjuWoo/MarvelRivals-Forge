@@ -11,7 +11,7 @@ from .util import ForgeError, UsageError, load_json, pak_name, save_json, slugif
 
 MANIFEST = "mrforge.json"
 LAYOUT = ("vanilla", "work/textures", "work/materials", "work/sources", "build", "dist")
-KINDS = ("texture", "material", "mesh")
+KINDS = ("texture", "material", "mesh", "physics")
 
 
 def new(name: str, skin: dict, kinds: list[str], changelist: int | None, out: str | None = None,

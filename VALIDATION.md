@@ -3,6 +3,24 @@
 Evidence per tier. `static`, `build`, `package` are proven by the forge; `load` and `gameplay` only by an in-game
 look (`mrforge check-load --confirm`). "live" = run on the build machine against the installed game and tools.
 
+## v1.0.0 - 2026-11-25, game build 1.1.4066382 (Season 11.0), Unreal Engine 5.3.2, Blender 5.3.0
+
+| Check | Result | How |
+|---|---|---|
+| Offline suite | pass (79 tests) incl. physics JSON edits, header rule, V-PHYS pass/fail, unified build, plan combine | `python tests/run_tests.py` |
+| `mrforge sync` / `index` for the patched game | exact mapping for 4066382 (SHA-256 `a92c8164...3aad`); 318,153 packages, 40 containers, 5.9 s | live |
+| Physics JSON round trip | `Post_1061303_Physics` to_json -> from_json: `.uexp` byte-identical; after appending chains the CDO re-parses and every value reads back | live spike |
+| Header rule (D25) | dropping the node-level header -> RawExport (unparseable); dropping only BoneSettings' header -> values read back | live bisect |
+| Mixed packing (D26) | UAssetTool `create_mod_iostore` with an injected texture + edited physics asset: both extract back (texture PF_DXT1 2048x2048 12 mips; chains intact) | live |
+| `mrforge selftest physics` | exit 0: 2 chest chains added + 1 chain tuned, retoc packer, build read-back ok, V-PHYS pass, 16 s | live |
+| `mrforge selftest texture` | exit 0, static/build/package pass, 13 s | live |
+| `mrforge selftest mesh --lobby` | exit 0 through the unified build (both meshes cooked, V-MESH pass), 164 s | live |
+| Test mod `forge-v1-test` (skin 1061303) | `mesh inflate` x1.25 on L/R_Breast_01_Jnt (2,358 / 2,443 vertices moved, max 2.2 cm), `mesh check` pass, `mesh preview` looked at; body texture hue 150 (sheet looked at); 2 chest jiggle chains (preset jiggle) on AnimGraphNode_KawaiiPhysics_5 | live |
+| `mrforge build` (test mod) | 4 packages (texture, physics, 2 meshes) in one container, UAssetTool packer, mesh checks 481 bones/18 slots and 646/19 equal vanilla, physics read-back ok, 137 s | live |
+| `mrforge validate` (test mod) | static/build/package pass: V-NAME, V-FLAGS (Compressed, Indexed), V-PATHS, V-LEAK, V-STALE, V-RECEIPT, V-TEX, V-PHYS, V-MESH; V-CONFLICT warns (installed BodyReshape mods replace the same mesh/texture) | live |
+| `mrforge package` / `deploy` (test mod) | zip 6.2 MB (SHA-256 `e689fa46...2ba8`); deployed to `~mods/ZZZ-mrforge-forge-v1-test` with receipt | live |
+| load / gameplay | **not_run**: waiting for the owner's in-game look (practice range for jiggle; disable the conflicting BodyReshape mods) | owner |
+
 ## v0.2.0 - 2026-11-15, game build 1.1.4042190 (Season 11.0), Unreal Engine 5.3.2, Blender 5.3.0
 
 | Check | Result | How |

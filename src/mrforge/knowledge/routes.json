@@ -146,8 +146,10 @@
         "mrforge new \"<Mod Name>\" --skin <skinId> --kind mesh",
         "cd <project>; mrforge mesh export --lobby",
         "mrforge mesh blend   then edit work/mesh/*.blend in Blender (keep bones, weights, material slots)",
+        "mrforge mesh inflate --bone <bone> --factor 1.2   (optional scripted body-shape edit)",
+        "mrforge mesh preview   then look at build/preview/<mesh>.png",
         "mrforge mesh check",
-        "mrforge mesh build",
+        "mrforge build   (cooks only edited meshes; mesh build cooks all)",
         "mrforge validate",
         "mrforge package",
         "mrforge deploy",
@@ -165,24 +167,47 @@
     },
     {
       "id": "physics",
-      "summary": "Jiggle / cloth / hair physics tuning. Not in v0.1; retoc-rivals-cli fix-kawaii-physics is the planned base.",
-      "release": "later",
+      "summary": "Jiggle, hair, cloth and tail physics: add KawaiiPhysics chains (e.g. chest jiggle) or tune existing ones in the skin's post-process AnimBlueprint. No Unreal Editor needed.",
+      "release": "v1.0",
       "keywords": [
         "physics",
         "jiggle",
         "bounce",
+        "bouncy",
         "kawaii",
         "cloth",
         "sway",
-        "wobble"
+        "wobble",
+        "jiggly",
+        "hair physics",
+        "skirt physics",
+        "springy",
+        "floppy",
+        "stiffer",
+        "softer"
       ],
       "commands": [
-        "not available yet: see knowledge doc mesh-route for status"
+        "mrforge doctor   (route physics must be available)",
+        "mrforge new \"<Mod Name>\" --skin <skinId> --kind physics",
+        "cd <project>; mrforge extract --physics",
+        "mrforge phys list   (nodes, chains, root bones, parameters)",
+        "mrforge phys add-chain --root L_Breast_01_Jnt --root R_Breast_01_Jnt --preset jiggle",
+        "mrforge phys set Damping 0.25 --bone \"*hair*\"   (tune existing chains)",
+        "mrforge build",
+        "mrforge validate",
+        "mrforge package",
+        "mrforge deploy",
+        "mrforge check-load <id>"
       ],
       "docs": [
-        "mesh-route"
+        "physics-route",
+        "asset-layout"
       ],
-      "avoid": []
+      "avoid": [
+        "guessing bone names (check them in Blender after mesh export/blend)",
+        "expecting lobby jiggle: lobby post-process assets often have no KawaiiPhysics node",
+        "obfuscate/strip/encrypt options"
+      ]
     },
     {
       "id": "unsupported",

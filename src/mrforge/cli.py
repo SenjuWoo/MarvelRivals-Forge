@@ -282,7 +282,7 @@ def cmd_conflicts(args, out):
     if args.project or args.mine:
         root = _project(args)
         lk = _lock(root)
-        pk = [t["package"] for t in lk["textures"].values()] + [r["package"] for r in lk["materials"].values()]
+        pk = [x["package"] for sec in ("textures", "materials", "physics") for x in lk.get(sec, {}).values()]
         mods = [m for m in mods if "-mrforge-" not in m["folder"]]
         return {"project": str(root), "conflicts": conflicts(mods, pk)}
     return {"conflicts": conflicts(mods)}
@@ -300,9 +300,9 @@ def cmd_new(args, out):
         out.warn(f"game not found ({e.code}); game_changelist will be set by mrforge extract")
     kinds = [k.strip() for k in args.kind.split(",") if k.strip()]
     root = new(args.name, s, kinds, cl, args.out, args.description or "")
-    if "mesh" in kinds:
-        out.gaps.append("mesh kind: route ships in v0.2 (mrforge plan shows availability)")
-    return {"project": str(root), "skin": s, "next": f"cd \"{root}\" && mrforge extract --textures \"T_{s['skin_id']}_*\""}
+    first = {"mesh": "mrforge mesh export --lobby", "physics": "mrforge extract --physics"}.get(
+        kinds[0] if kinds else "", f"mrforge extract --textures \"T_{s['skin_id']}_*\"")
+    return {"project": str(root), "skin": s, "next": f"cd \"{root}\" && {first}"}
 
 
 def cmd_bump(args, out):
@@ -312,9 +312,10 @@ def cmd_bump(args, out):
 
 def cmd_extract(args, out):
     from .extract import run
-    if not (args.textures or args.materials or args.all or args.package):
-        raise UsageError("choose what to extract", "--textures \"<glob>\" and/or --materials, --all, --package <path>")
-    d = run(_project(args), args.textures, args.materials, args.all, args.package, args.vfx, args.game)
+    if not (args.textures or args.materials or args.all or args.package or args.physics):
+        raise UsageError("choose what to extract",
+                         "--textures \"<glob>\" and/or --materials, --physics, --all, --package <path>")
+    d = run(_project(args), args.textures, args.materials, args.all, args.package, args.vfx, args.game, args.physics)
     out.warn(d.pop("warnings"))
     return d
 
@@ -382,6 +383,68 @@ def cmd_mat(args, out):
     raise UsageError("unknown mat action")
 
 
+def cmd_phys(args, out):
+    from . import phys as PH
+    from .util import load_json, save_json
+    root = _project(args)
+    lk = _lock(root)
+    a = args.action
+    if a == "presets":
+        return {"presets": PH.PRESETS, "params": sorted(PH.PARAMS)}
+    if a == "list":
+        import fnmatch
+        res = []
+        for k in PH.resolve_keys(lk, args.asset) if args.asset else sorted(lk.get("physics", {})):
+            info = PH.listing(PH.apply(root, lk, k))
+            if args.bone:
+                info["chains"] = [c for c in info["chains"] if any(fnmatch.fnmatchcase(r, args.bone) for r in c["roots"])]
+            res.append({"asset": k, **info, "edits": PH.load_ops(root)["assets"].get(k, [])})
+        if not res:
+            raise ForgeError("PHYSICS_NOT_EXTRACTED", "no physics asset extracted", "mrforge extract --physics")
+        return {"assets": res}
+    if a == "reset":
+        ops = PH.load_ops(root)
+        keys = PH.resolve_keys(lk, args.asset) if args.asset else sorted(ops["assets"])
+        for k in keys:
+            ops["assets"].pop(k, None)
+        save_json(PH.ops_path(root), ops)
+        return {"reset": keys}
+    if a == "add-chain":
+        params = PH.parse_params(args.param, args.preset)
+        done = []
+        for bone in args.root:
+            op = {"op": "add_chain", "root": bone, "params": params}
+            if args.host:
+                op["host"] = args.host
+            done += PH.record(root, lk, args.asset, op)
+        names = set()
+        for k in {x["asset"] for x in done}:
+            names |= set(load_json(root / lk["physics"][k]["vanilla_json"]).get("NameMap", []))
+        unknown = [b for b in args.root if b not in names]
+        if unknown:
+            out.warn(f"{unknown} not referenced by the vanilla asset: check the exact bone name (mrforge mesh blend + "
+                     "Blender, or FModel); a wrong name simulates nothing")
+        out.gaps.append("physics runs in game only: jiggle is proven by an in-game look (check-load --confirm)")
+        return {"added": done, "next": "mrforge build, then mrforge validate"}
+    if a == "set":
+        if not (args.bone or args.node):
+            raise UsageError("choose chains with --bone <glob> and/or --node <name>", "mrforge phys list shows them")
+        value = args.value
+        if args.param in PH.BOOL_PARAMS:
+            value = str(value).lower() in ("1", "true", "yes", "on")
+        else:
+            try:
+                value = float(value)
+            except ValueError as e:
+                raise UsageError(f"{value!r} is not a number") from e
+        op = {"op": "set", "param": args.param, "value": value}
+        for k in ("bone", "node", "chain"):
+            if getattr(args, k) is not None:
+                op[k] = getattr(args, k)
+        return {"set": PH.record(root, lk, args.asset, op), "next": "mrforge build"}
+    raise UsageError(f"unknown phys action {a}")
+
+
 def cmd_mesh(args, out):
     from . import mesh as X
     root = _project(args)
@@ -392,10 +455,15 @@ def cmd_mesh(args, out):
         d = X.blend(root, args.force)
     elif a == "fbx":
         d = X.fbx(root)
+    elif a == "inflate":
+        d = X.inflate(root, args.bone, args.factor, args.mesh, not args.no_children)
+    elif a == "preview":
+        d = X.preview(root, args.focus)
     elif a == "build":
         from .uebuild import build
         d = build(root, args.game)
         out.warn(d.pop("warnings"))
+        d["next"] = "mrforge validate"
         for pkg, c in d["mesh_checks"].items():
             for prob in c["problems"]:
                 out.errors.append({"code": "V-MESH", "message": f"{pkg}: {prob}"})
@@ -414,8 +482,13 @@ def cmd_mesh(args, out):
 
 def cmd_build(args, out):
     from .build import run
-    d = run(_project(args))
+    d = run(_project(args), args.game)
     out.warn(d.pop("warnings"))
+    for pkg, c in d["mesh_checks"].items():
+        for prob in c["problems"]:
+            out.errors.append({"code": "V-MESH", "message": f"{pkg}: {prob}"})
+    if "mesh" in d["routes"] or "physics" in d["routes"]:
+        out.gaps.append("load tier: mesh and physics edits must be looked at in game before they count as working")
     d["next"] = "mrforge validate"
     return d
 
@@ -459,9 +532,11 @@ def cmd_undeploy(args, out):
 
 
 def cmd_selftest(args, out):
-    from .selftest import mesh, texture
+    from .selftest import mesh, physics, texture
     if args.route == "mesh":
         d, ok = mesh(args.skin, args.keep, args.game, args.lobby)
+    elif args.route == "physics":
+        d, ok = physics(args.skin, args.keep, args.game)
     else:
         d, ok = texture(args.skin, args.texture, args.keep, args.game)
     for r in d.get("rules", []):
@@ -546,18 +621,20 @@ def parser() -> argparse.ArgumentParser:
     s = add("new", cmd_new, "create a mod project")
     s.add_argument("name")
     s.add_argument("--skin", required=True, help="7-digit skin id or skin name")
-    s.add_argument("--kind", default="texture", help="texture[,material[,mesh]]")
+    s.add_argument("--kind", default="texture", help="any of texture,material,mesh,physics (comma-separated)")
     s.add_argument("--out", help="project folder (default <projects root>/<slug>)")
     s.add_argument("--description", help="text for README.txt in the package")
     s = add("bump", cmd_bump, "bump the project version and add a changelog entry")
     s.add_argument("part", nargs="?", default="patch", choices=["major", "minor", "patch"])
     s.add_argument("--note", help="changelog line")
-    s = add("extract", cmd_extract, "extract vanilla textures/materials of the project's skin")
+    s = add("extract", cmd_extract, "extract vanilla textures/materials/physics assets of the project's skin")
     s.add_argument("--textures", action="append", help="glob over texture names, e.g. \"T_*_Body_*\" (repeatable)")
     s.add_argument("--materials", action="store_true", help="all material instances of the skin")
     s.add_argument("--all", action="store_true", help="all textures and materials of the skin")
     s.add_argument("--package", action="append", help="any vanilla package path, e.g. a shared texture (repeatable)")
     s.add_argument("--vfx", action="store_true", help="include VFX folders")
+    s.add_argument("--physics", action="store_true",
+                   help="the skin's post-process AnimBlueprints (Post_<skin>_Physics and _Lobby_Physics)")
 
     s = add("tex", cmd_tex, "texture edits (recorded ops, re-applied on build)")
     ts = s.add_subparsers(dest="action", required=True, parser_class=Parser)
@@ -610,19 +687,50 @@ def parser() -> argparse.ArgumentParser:
     for name, sp in ms.choices.items():
         sp.set_defaults(fn=cmd_mat, cmdname=f"mat {name}")
 
-    s = add("mesh", cmd_mesh, "mesh route (v0.2 preview): export vanilla mesh, Blender .blend/FBX, check against vanilla")
+    s = add("phys", cmd_phys, "physics route: KawaiiPhysics chains (jiggle, hair, cloth) in the skin's post-process AnimBlueprint")
+    ps = s.add_subparsers(dest="action", required=True, parser_class=Parser)
+    t = ps.add_parser("list", description="chains per KawaiiPhysics node (evaluation order), roots and parameters")
+    t.add_argument("asset", nargs="?", help="Post_<skin>_Physics (default: every extracted asset)")
+    t.add_argument("--bone", help="only chains whose root matches this glob")
+    ps.add_parser("presets", description="parameter presets for add-chain (jiggle, bouncy, firm)")
+    t = ps.add_parser("add-chain", description="simulate a bone chain that has no physics yet (e.g. chest or butt jiggle)")
+    t.add_argument("--root", action="append", required=True, help="root bone; its children swing (repeatable)")
+    t.add_argument("--preset", choices=["jiggle", "bouncy", "firm"], default="jiggle")
+    t.add_argument("--param", action="append", help="Param=value override, e.g. Damping=0.2 (repeatable)")
+    t.add_argument("--host", help="KawaiiPhysics node to add the chain to (default: the node evaluated last)")
+    t.add_argument("--asset", help="physics asset (default: every extracted asset with KawaiiPhysics nodes)")
+    t = ps.add_parser("set", description="change a parameter on existing chains (e.g. softer hair, stiffer skirt)")
+    t.add_argument("param")
+    t.add_argument("value")
+    t.add_argument("--bone", help="chains whose root matches this glob, e.g. *hair*")
+    t.add_argument("--node", help="one KawaiiPhysics node by name")
+    t.add_argument("--chain", type=int, help="chain index inside the node")
+    t.add_argument("--asset", help="physics asset (default: every extracted asset with KawaiiPhysics nodes)")
+    t = ps.add_parser("reset", description="drop physics edits")
+    t.add_argument("asset", nargs="?")
+    for name, sp in ps.choices.items():
+        sp.set_defaults(fn=cmd_phys, cmdname=f"phys {name}")
+
+    s = add("mesh", cmd_mesh, "mesh route: export vanilla mesh, Blender .blend/FBX, body-shape edits, check, Unreal build")
     xs = s.add_subparsers(dest="action", required=True, parser_class=Parser)
     t = xs.add_parser("export", description="export the skin's vanilla mesh (.uemodel + materials + PNG) via fmodel-mcp")
     t.add_argument("--lobby", action="store_true", help="also export the _Lobby mesh")
     t = xs.add_parser("blend", description="import the exported .uemodel into a .blend (headless Blender)")
     t.add_argument("--force", action="store_true", help="re-import over an existing .blend")
     xs.add_parser("fbx", description="export the .blend to build/fbx/*.fbx (no leaf bones)")
+    t = xs.add_parser("inflate", description="weight-driven body-shape edit: grow or shrink the skin around bones")
+    t.add_argument("--bone", action="append", required=True, help="bone name, e.g. L_Breast_01_Jnt (repeatable)")
+    t.add_argument("--factor", type=float, default=1.2, help="1.2 = 20%% bigger, 0.9 = 10%% smaller")
+    t.add_argument("--mesh", choices=["all", "game", "lobby"], default="all")
+    t.add_argument("--no-children", action="store_true", help="only the named bones' own weights")
+    t = xs.add_parser("preview", description="vanilla | edited renders (front, side) in build/preview/<mesh>.png")
+    t.add_argument("--focus", help="bone to centre on, e.g. spine_04 (default: whole body)")
     xs.add_parser("check", description="bones, hierarchy, material slots and vertex groups must match vanilla")
-    xs.add_parser("build", description="Unreal 5.3.2: import at the vanilla path with placeholders, cook, pack, verify vs vanilla")
+    xs.add_parser("build", description="mrforge build with every exported mesh cooked (edited or not) through Unreal 5.3.2")
     for name, sp in xs.choices.items():
         sp.set_defaults(fn=cmd_mesh, cmdname=f"mesh {name}")
 
-    add("build", cmd_build, "inject/convert changed assets and pack the mod")
+    add("build", cmd_build, "build every changed texture, material, physics asset and mesh into one mod container")
     s = add("validate", cmd_validate, "rules over the built mod; evidence tiers")
     s.add_argument("--quick", action="store_true", help="skip the round-trip extraction")
     add("package", cmd_package, "deterministic zip of the mod for a mod manager")
@@ -632,7 +740,7 @@ def parser() -> argparse.ArgumentParser:
     s = add("undeploy", cmd_undeploy, "remove a deployed forge mod (receipt-listed files only)")
     s.add_argument("id", nargs="?")
     s = add("selftest", cmd_selftest, "real-toolchain smoke run (no deploy)")
-    s.add_argument("route", choices=["texture", "mesh"])
+    s.add_argument("route", choices=["texture", "mesh", "physics"])
     s.add_argument("--lobby", action="store_true", help="mesh: also round-trip the lobby mesh")
     s.add_argument("--skin", default="1061303")
     s.add_argument("--texture")

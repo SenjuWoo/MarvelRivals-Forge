@@ -30,12 +30,19 @@ def load_lock(root: Path, required: bool = True) -> dict:
                          "mrforge extract --textures <glob> | --materials | --all")
     lk.setdefault("textures", {})
     lk.setdefault("materials", {})
+    lk.setdefault("physics", {})
     lk.setdefault("packages", {})
     return lk
 
 
+def is_postprocess(path: str, skin_id: str) -> bool:
+    """Post_<skin>_Physics / Post_<skin>_Lobby_Physics: the skin's post-process AnimBlueprints (physics route)."""
+    stem = Path(path).stem
+    return stem in (f"Post_{skin_id}_Physics", f"Post_{skin_id}_Lobby_Physics")
+
+
 def select(idx: dict, skin_id: str, textures: list[str] | None, materials: bool, all_: bool,
-           extra: list[str] | None, vfx: bool) -> list[dict]:
+           extra: list[str] | None, vfx: bool, physics: bool = False) -> list[dict]:
     pk = I.skin_packages(idx, skin_id)
     chosen = []
     for p in pk:
@@ -45,7 +52,9 @@ def select(idx: dict, skin_id: str, textures: list[str] | None, materials: bool,
         is_vfx = "/vfx/" in low
         if is_vfx and not vfx:
             continue
-        if "/textures/" in low and stem.startswith("T_"):
+        if physics and is_postprocess(p["path"], skin_id):
+            chosen.append(p)
+        elif "/textures/" in low and stem.startswith("T_"):
             if all_ or (textures and any(fnmatch.fnmatchcase(stem, g) for g in textures)):
                 chosen.append(p)
         elif cls == "material" and "/materials/" in low:
@@ -62,7 +71,7 @@ def select(idx: dict, skin_id: str, textures: list[str] | None, materials: bool,
 
 
 def run(root: Path, textures: list[str] | None = None, materials: bool = False, all_: bool = False,
-        extra: list[str] | None = None, vfx: bool = False, game_arg=None) -> dict:
+        extra: list[str] | None = None, vfx: bool = False, game_arg=None, physics: bool = False) -> dict:
     m = P.manifest(root)
     groot, _ = find_game(game_arg)
     lay = layout(groot)
@@ -72,7 +81,7 @@ def run(root: Path, textures: list[str] | None = None, materials: bool = False, 
                          "re-extract in a fresh project, or update game_changelist in mrforge.json after reviewing")
     usmap = require_usmap(cl)
     idx = I.load(cl)
-    chosen = select(idx, m["skin_id"], textures, materials, all_, extra, vfx)
+    chosen = select(idx, m["skin_id"], textures, materials, all_, extra, vfx, physics)
     if not chosen:
         raise ForgeError("NOTHING_SELECTED", "no package matched the selection",
                          "mrforge skin inspect <id> shows names; e.g. --textures \"T_*_Body_*\" or --materials")
@@ -149,14 +158,45 @@ def run(root: Path, textures: list[str] | None = None, materials: bool = False, 
             lk["materials"][key] = {"package": mp, "vanilla_json": P.rel_project(root, j),
                                     "work_json": P.rel_project(root, work), "json_sha256": sha256_file(j),
                                     "other_skin": other_skin(mp)}
+    phys = [c["path"] for c in chosen if is_postprocess(c["path"], m["skin_id"])]
+    if phys:
+        from . import phys as PH
+        jroot = vroot / "json"
+        for pp in phys:
+            outdir = jroot / Path(pp).parent
+            outdir.mkdir(parents=True, exist_ok=True)
+            r = run_tool("uassettool", ["to_json", fwd(raw / pp), fwd(usmap), fwd(outdir)], timeout=600)
+            j = outdir / (Path(pp).stem + ".json")
+            if r["rc"] != 0 or not j.is_file():
+                warnings.append(f"{Path(pp).stem}: to_json failed: {(r['stdout'] + r['stderr']).strip()[-200:]}")
+                continue
+            key = Path(pp).stem
+            work = Path(root) / "work" / "physics" / f"{key}.json"
+            work.parent.mkdir(parents=True, exist_ok=True)
+            if key in lk["physics"] and work.is_file() and sha256_file(work) != lk["physics"][key]["json_sha256"]:
+                warnings.append(f"{key}: kept your edited work JSON")
+            else:
+                shutil.copyfile(j, work)
+            try:
+                info = PH.listing(load_json(j))
+            except ForgeError as e:
+                warnings.append(f"{key}: {e.message}")
+                info = {"kawaii_nodes": 0, "chains": [], "anim_nodes": 0}
+            if not info["kawaii_nodes"]:
+                warnings.append(f"{key}: no KawaiiPhysics node (chains cannot be added here; lobby assets often have none)")
+            lk["physics"][key] = {"package": pp, "vanilla_json": P.rel_project(root, j), "work_json": P.rel_project(root, work),
+                                  "json_sha256": sha256_file(j), "kawaii_nodes": info["kawaii_nodes"],
+                                  "chains": len(info["chains"]), "anim_nodes": info["anim_nodes"]}
     save_json(lock_path(root), lk)
     if m.get("game_changelist") is None:
         m["game_changelist"] = cl
         P.save_manifest(root, m)
     return {"selected": len(chosen), "converted": res["converted"], "textures": len(tex), "materials": len(mats),
+            "physics": len(phys),
             "seconds": round(time.time() - t0, 1), "warnings": warnings, "lock": str(lock_path(root)),
             "unrequested_files": sorted(P.rel_project(root, f) for f in iter_files(raw)
-                                        if f.suffix == ".uasset" and P.rel_project(root, f)[len("vanilla/raw/"):].lower() not in wanted)[:20]}
+                                        if f.suffix == ".uasset" and P.rel_project(root, f)[len("vanilla/raw/"):].lower()
+                                        not in wanted | {k.lower() for k in lk["packages"]})[:20]}
 
 
 def _mat_key(pkg: str, skin_id: str) -> str:

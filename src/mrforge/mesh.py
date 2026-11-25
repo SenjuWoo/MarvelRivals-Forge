@@ -21,7 +21,7 @@ from . import tools as T
 from .game import find_game, layout, version
 from .home import home
 from .sync import aes_key, require_usmap
-from .util import EnvError, ForgeError, PKG_DIR, load_json, run, save_json
+from .util import EnvError, ForgeError, PKG_DIR, UsageError, load_json, run, save_json, sha256_file
 
 VIEW_PREFIX = "mrforge-vanilla-view-"
 GAME_PROFILE = "GAME_MarvelRivals"
@@ -170,7 +170,9 @@ def blend(root: Path, force: bool = False) -> dict:
             out.append({"blend": str(b), "skipped": "exists (use --force to re-import; your edits would be lost)"})
             continue
         res = run_blender(["import", str(addon), str(um), str(b)])
-        save_json(root / "work" / "mesh" / (um.stem + ".vanilla.json"), {k: res[k] for k in ("meshes", "armatures")})
+        # blend_sha256 marks the unedited import: mrforge build cooks only meshes whose .blend differs from it.
+        save_json(root / "work" / "mesh" / (um.stem + ".vanilla.json"),
+                  {**{k: res[k] for k in ("meshes", "armatures")}, "blend_sha256": sha256_file(b)})
         out.append({"blend": str(b), "meshes": [{"name": x["name"], "vertices": x["vertices"],
                                                  "material_slots": len(x["material_slots"])} for x in res["meshes"]],
                     "bones": [a["bone_count"] for a in res["armatures"]]})
@@ -189,6 +191,69 @@ def fbx(root: Path) -> dict:
         res = run_blender(["fbx", str(b), str(f)])
         out.append({"fbx": str(f), "size": f.stat().st_size if f.is_file() else 0, "meshes": len(res["meshes"])})
     return {"fbx": out}
+
+
+def inflate(root: Path, bones: list[str], factor: float, which: str = "all", children: bool = True) -> dict:
+    """Weight-driven body-shape edit on the project's .blend files (e.g. chest or hips bigger/smaller).
+
+    Every edit is appended to work/mesh/edits.json; re-import with mesh blend --force to start over."""
+    root = Path(root)
+    if not bones:
+        raise UsageError("name at least one bone", "--bone L_Breast_01_Jnt --bone R_Breast_01_Jnt")
+    if not 0.2 <= factor <= 3.0:
+        raise UsageError(f"factor {factor} is outside 0.2..3.0", "1.2 = 20% bigger, 0.9 = 10% smaller")
+    out = []
+    for um in _uemodels(root):
+        lobby = um.stem.endswith("_Lobby")
+        if which == "game" and lobby or which == "lobby" and not lobby:
+            continue
+        b = root / "work" / "mesh" / (um.stem + ".blend")
+        if not b.is_file():
+            raise ForgeError("NO_BLEND", f"{b.name} missing", "mrforge mesh blend")
+        spec = root / "build" / "inflate.json"
+        save_json(spec, {"bones": [{"bone": x, "factor": factor} for x in bones], "children": children})
+        res = run_blender(["inflate", str(b), str(spec)])
+        out.append({"blend": b.name, "result": res["inflate"]})
+    if not out:
+        raise ForgeError("NO_BLEND", f"no .blend matches --mesh {which}", "mrforge mesh blend")
+    log = load_json(root / "work" / "mesh" / "edits.json", {"edits": []})
+    log["edits"].append({"op": "inflate", "bones": bones, "factor": factor, "mesh": which, "children": children,
+                         "date": time.strftime("%Y-%m-%dT%H:%M:%S"), "result": out})
+    save_json(root / "work" / "mesh" / "edits.json", log)
+    return {"edited": out, "next": "mrforge mesh check, then mrforge build"}
+
+
+def preview(root: Path, focus: str | None = None) -> dict:
+    """build/preview/<mesh>.png: vanilla | edited, front and side, so an edit is looked at before the 2-minute cook."""
+    from PIL import Image, ImageDraw
+    root = Path(root)
+    addon = T.tool_dir(T.require("ueformat-blender"))
+    prev = root / "build" / "preview"
+    prev.mkdir(parents=True, exist_ok=True)
+    out = []
+    for um in _uemodels(root):
+        b = root / "work" / "mesh" / (um.stem + ".blend")
+        if not b.is_file():
+            raise ForgeError("NO_BLEND", f"{b.name} missing", "mrforge mesh blend")
+        vb = prev / f"{um.stem}.vanilla.blend"
+        if not vb.is_file():
+            run_blender(["import", str(addon), str(um), str(vb)])
+        for tag, src in (("vanilla", vb), ("edited", b)):
+            run_blender(["render", str(src), str(prev / f"{um.stem}.{tag}")] + ([focus] if focus else []))
+        tiles = [Image.open(prev / f"{um.stem}.{tag}_{v}.png").convert("RGB")
+                 for v in ("front", "side") for tag in ("vanilla", "edited")]
+        w, h = tiles[0].size
+        sheet = Image.new("RGB", (w * 4, h + 24), (30, 30, 30))
+        dr = ImageDraw.Draw(sheet)
+        for i, (im, label) in enumerate(zip(tiles, ("front vanilla", "front edited", "side vanilla", "side edited"))):
+            sheet.paste(im, (i * w, 24))
+            dr.text((i * w + 6, 6), f"{um.stem}  {label}", fill=(230, 230, 230))
+        png = prev / f"{um.stem}.png"
+        sheet.save(png)
+        for f in prev.glob(f"{um.stem}.*_*.png"):
+            f.unlink()
+        out.append(str(png))
+    return {"previews": out, "next": "open the PNGs and look at them, then mrforge build"}
 
 
 def compare(vanilla: dict, current: dict) -> list[str]:

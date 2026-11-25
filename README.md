@@ -1,7 +1,8 @@
 # MarvelRivals-Forge
 
 A command-line forge for making **Marvel Rivals skin mods**, built so an AI agent (or a person) can go from
-"make this skin red" to a validated, packaged mod in a handful of commands, without opening Unreal Editor.
+"make this skin red" or "add chest jiggle" to a validated, packaged mod in a handful of commands. Textures,
+materials and physics need no Unreal Editor; mesh edits run Blender and Unreal Engine 5.3.2 headless.
 
 - **One CLI, JSON everywhere**: `mrforge <command>` prints one JSON object with `ok`, `data`, `errors` (each with a
   fix), `warnings` and `gaps`.
@@ -9,8 +10,12 @@ A command-line forge for making **Marvel Rivals skin mods**, built so an AI agen
   `mrforge setup` from their GitHub releases and checked against SHA-256 hashes in `tools.lock.json`.
 - **Facts from your install**: game build, loader, installed mods and every vanilla package path are read from the
   game itself; the mapping file must match your exact game build.
-- **Edit as recorded ops**: hue, tint, levels, overlay, replace (with masks) and material parameters are replayed
-  from vanilla on every build, so edits never stack or drift.
+- **Edit as recorded ops**: hue, tint, levels, overlay, replace (with masks), material parameters and physics
+  chains are replayed from vanilla on every build, so edits never stack or drift.
+- **Physics without the editor**: add KawaiiPhysics chains (chest/butt jiggle) or tune hair and cloth in the skin's
+  own post-process AnimBlueprint; the vanilla anim graph stays untouched.
+- **One mod, every route**: a project can combine texture, material, physics and mesh edits; `build` packs them
+  into one container and `validate` reads each one back out of it.
 - **Evidence tiers**: `validate` proves static, build and package tiers (including extracting the edited texture back
   out of the built mod); load and gameplay are recorded only from an in-game look.
 
@@ -48,6 +53,22 @@ mrforge package          # dist\RedCat-0.1.0.zip for your mod manager
 mrforge deploy           # optional: copies into ~mods\ZZZ-mrforge-red-cat\
 ```
 
+Body shape and jiggle in one mod:
+
+```powershell
+mrforge new "Curvy Bounce" --skin <skinId> --kind texture,mesh,physics
+cd projects\curvy-bounce
+mrforge mesh export --lobby
+mrforge mesh blend
+mrforge mesh inflate --bone L_Breast_01_Jnt --bone R_Breast_01_Jnt --factor 1.2
+mrforge mesh preview     # look at build\preview\<mesh>.png
+mrforge mesh check
+mrforge extract --physics
+mrforge phys add-chain --root L_Breast_01_Jnt --root R_Breast_01_Jnt --preset jiggle
+mrforge build            # one container: edited meshes (Unreal 5.3.2) + physics
+mrforge validate
+```
+
 `mrforge capabilities` lists every command; `mrforge guide` prints the runbook; `mrforge knowledge` lists the docs.
 
 ## Routes
@@ -56,8 +77,11 @@ mrforge deploy           # optional: copies into ~mods\ZZZ-mrforge-red-cat\
 |---|---|---|
 | texture | recolor, retexture, logos, decals, skin tone | v0.1 |
 | material | material instance tints, glow, roughness | v0.1 |
-| mesh | body shape, outfit geometry edits (Blender + UE 5.3.2), in-match and lobby meshes | v0.2 |
-| physics | jiggle / cloth tuning | later |
+| mesh | body shape, outfit geometry edits (Blender + UE 5.3.2), in-match and lobby meshes; scripted `mesh inflate` | v0.2 |
+| physics | add jiggle chains, tune hair/cloth/tail chains (KawaiiPhysics) in matches | v1.0 |
+
+Limits: lobby (hero select) jiggle needs an AnimBlueprint authored in Unreal and is not automated; load and
+gameplay are proven only by looking in game.
 
 ## Safety
 

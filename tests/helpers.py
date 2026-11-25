@@ -65,6 +65,64 @@ def material_json(skin=SKIN):
     }
 
 
+def _hdr():
+    return {"$type": "UAssetAPI.Unversioned.FUnversionedHeader, UAssetAPI", "ZeroMask": [False, True]}
+
+
+def _f(name, value):
+    return {"$type": "UAssetAPI.PropertyTypes.Objects.FloatPropertyData, UAssetAPI", "Name": name, "Value": value,
+            "IsZero": False}
+
+
+def _struct(name, struct, values, header=True):
+    return {"$type": "UAssetAPI.PropertyTypes.Structs.StructPropertyData, UAssetAPI", "StructType": struct, "Name": name,
+            "OriginalStructHeader": _hdr() if header else None, "Value": values}
+
+
+def _bone(name, bone):
+    return _struct(name, "BoneReference", [{"Name": "BoneName", "Value": bone}])
+
+
+def kawaii_chain(root, idx=0, damping=0.35):
+    """One KawaiiPhysicsChain element shaped like the captured Post_1061303_Physics data."""
+    bs = _struct("BoneSettings", "BoneSettings", [
+        _bone("RootBone", root), {"Name": "ExcludeBones", "Value": []},
+        {"Name": "AdditionalRootBones", "Value": [_struct("0", "KawaiiPhysicsRootBoneSetting", [_bone("RootBone", root + "_B")])]},
+        _f("DummyBoneLength", "+0")])
+    ps = _struct("PhysicsSettings", "KawaiiPhysicsSettings", [
+        _f("Damping", damping), _f("Stiffness", 0.05), _f("WorldDampingLocation", 0.98), _f("WorldDampingRotation", 0.8),
+        _f("Radius", 3.0), _f("LimitAngle", 40.0), _f("LimitLinear", "+0"), _f("GravityScale", 1.0)])
+    phs = _struct("PhysicsSettings", "KawaiiPhysicsChainPhysicsSettings", [
+        ps, {"Name": "bUseCurve", "Value": True}, _f("TeleportDistanceThreshold", 300.0),
+        _f("TeleportRotationThreshold", 10.0)])
+    return _struct(str(idx), "KawaiiPhysicsChain", [bs, phs])
+
+
+def _node(name, struct, link_field, link, extra=None):
+    pose = _struct(link_field, "ComponentSpacePoseLink" if "Kawaii" in struct or "Constraint" in struct else "PoseLink",
+                   [{"Name": "LinkID", "Value": link}])
+    return _struct(name, struct, [pose] + (extra or []))
+
+
+def physics_json(with_kawaii=True):
+    """CDO in LinkID order: input(2) -> rivet(4) -> Kawaii(3) -> Kawaii_1(0) -> Root(1)."""
+    k1 = _node("AnimGraphNode_KawaiiPhysics_1", "AnimNode_KawaiiPhysics", "ComponentPose", 3,
+               [{"Name": "Chains", "Value": [kawaii_chain("Collar_A1")]}])
+    k0 = _node("AnimGraphNode_KawaiiPhysics", "AnimNode_KawaiiPhysics", "ComponentPose", 4,
+               [{"Name": "Chains", "Value": [kawaii_chain("hair_A1"), kawaii_chain("hair_B1", 1)]}])
+    if not with_kawaii:
+        k1 = _node("AnimGraphNode_Constraint_1", "AnimNode_Constraint", "ComponentPose", 3)
+        k0 = _node("AnimGraphNode_Constraint_2", "AnimNode_Constraint", "ComponentPose", 4)
+    cdo = [{"Name": "UberGraphFrame", "StructType": "PointerToUberGraphFrame"}, k1,
+           _node("AnimGraphNode_Root", "AnimNode_Root", "Result", 0),
+           _node("AnimGraphNode_LinkedInputPose", "AnimNode_LinkedInputPose", "InputPose", -1),
+           k0, _node("RivetConstraint", "AnimNode_Constraint", "ComponentPose", 2)]
+    # UberGraphFrame is not an anim node: LinkIDs index the AnimNode_* properties only.
+    return {"$type": "UAssetAPI.UAsset, UAssetAPI", "NameMap": ["Collar_A1", "hair_A1", "hair_B1", "L_Breast_01_Jnt"],
+            "Exports": [{"ObjectName": "Post_X_Physics_C", "Data": []},
+                        {"ObjectName": "Default__Post_X_Physics_C", "Data": cdo}]}
+
+
 def vanilla_packages():
     tex = lambda fmt, mips, w=64, color=(200, 120, 100): {"kind": "texture", "fmt": fmt, "mips": mips, "w": w, "h": w,  # noqa: E731
                                                           "color": list(color)}
@@ -76,7 +134,8 @@ def vanilla_packages():
         f"{BASE}/Materials/Lobby/MI_{SKIN}_Body_01.uasset": {"kind": "material", "json": material_json()},
         f"{BASE}/Meshes/SK_1061_{SKIN}.uasset": {"kind": "mesh"},
         f"{BASE}/Meshes/SK_1061_{SKIN}_Lobby.uasset": {"kind": "mesh"},
-        f"{BASE}/Post_{SKIN}_Physics.uasset": {"kind": "physics"},
+        f"{BASE}/Post_{SKIN}_Physics.uasset": {"kind": "json", "json": physics_json()},
+        f"{BASE}/Post_{SKIN}_Lobby_Physics.uasset": {"kind": "json", "json": physics_json(with_kawaii=False)},
         "Marvel/Content/Marvel/Characters/1061/1061001/Textures/T_1061001_Hair01_N.uasset": tex("PF_BC5", 7),
     }
 

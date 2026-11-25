@@ -1,36 +1,46 @@
 ---
 name: marvelrivals-forge
-description: Make, check, package and deploy Marvel Rivals skin mods (recolors, retextures, logos, skin tone, material tints and glow, body-shape and outfit mesh edits) with the mrforge CLI. Use for any Marvel Rivals mod, .pak/.utoc/.ucas, ~mods, skin id, texture, material or mesh edit request.
-version: 0.2.0
+description: Make, check, package and deploy Marvel Rivals skin mods (recolors, retextures, logos, skin tone, material tints and glow, body-shape and outfit mesh edits, jiggle/hair/cloth physics) with the mrforge CLI. Use for any Marvel Rivals mod, .pak/.utoc/.ucas, ~mods, skin id, texture, material, mesh or physics edit request.
+version: 1.0.0
 ---
 
-# MarvelRivals-Forge (mrforge 0.2.0)
+# MarvelRivals-Forge (mrforge 1.0.0)
 
 Every command prints JSON `{ok, data, errors[{code,message,fix}], warnings, gaps}`; exit 0/1/2 (usage)/3
 (environment). Follow `errors[].fix`. If `mrforge` is not on PATH, run `mrforge.cmd` from the forge folder.
 
-## Cold start
-1. `mrforge doctor` - fix every `fail`.
+## Cold start (and after every game patch)
+1. `mrforge doctor` - fix every `fail` (a patch shows as `usmap: fail` -> `mrforge sync`, then `mrforge index`).
 2. `mrforge setup` (or `--from <folder with tool copies>`), `mrforge sync`, `mrforge index`.
 
 ## Make a mod
-1. `mrforge plan "<request>"` - gives the route and the exact commands. Routes: `texture`, `material`, `mesh` (UE 5.3.2 + Blender).
-2. `mrforge skin find "<name>"` then `mrforge skin inspect <skinId>` (materials, textures, shared assets,
-   mods already overriding it).
-3. `mrforge new "<Mod Name>" --skin <skinId> --kind texture` and `cd` into the printed project.
-4. `mrforge extract --textures "T_<skinId>_Body_*"` (or `--materials`, `--all`).
-5. Edit: `mrforge tex hue|tint|levels|overlay|replace <texture> ... [--mask m.png]`,
-   `mrforge mat set <MI> <Param> <value>`. Never colour-edit `_N` normal maps.
-6. `mrforge tex sheet` and open `build/preview/sheet.png` - look at it before building.
-7. `mrforge build`, `mrforge validate` (all static/build/package rules pass), `mrforge package`.
+1. `mrforge plan "<request>"` - route + exact commands. Routes: `texture`, `material`, `physics` (no editor),
+   `mesh` (Blender + UE 5.3.2). One project can combine them: `--kind texture,mesh,physics`.
+2. `mrforge skin find "<name>"` then `mrforge skin inspect <skinId>` (materials, textures, physics assets,
+   shared assets, mods already overriding it).
+3. `mrforge new "<Mod Name>" --skin <skinId> --kind <kinds>` and `cd` into the printed project.
+4. Extract what you edit: `mrforge extract --textures "T_<skinId>_Body_*"` / `--materials` / `--physics`;
+   meshes: `mrforge mesh export --lobby` then `mrforge mesh blend`.
+5. Edit:
+   - textures: `mrforge tex hue|tint|levels|overlay|replace <texture> ... [--mask m.png]` (never colour-edit `_N`)
+   - materials: `mrforge mat set <MI> <Param> <value>`
+   - physics: `mrforge phys list`, `mrforge phys add-chain --root <bone> [--root <bone>] --preset jiggle|bouncy|firm`,
+     `mrforge phys set <Param> <value> --bone "<glob>"`
+   - meshes: edit `work/mesh/*.blend` in Blender, or `mrforge mesh inflate --bone <bone> --factor 1.2`
+6. Look before building: `mrforge tex sheet` -> `build/preview/sheet.png`; `mrforge mesh preview` ->
+   `build/preview/<mesh>.png`; `mrforge mesh check` must pass.
+7. `mrforge build` (one container for every edit; cooks only edited meshes), `mrforge validate` (all
+   static/build/package rules pass: V-TEX, V-MAT, V-PHYS, V-MESH as applicable), `mrforge package`.
 8. Only if the user wants it in game: `mrforge deploy`; after they look: `mrforge check-load --confirm "<note>"`.
+
+## Jiggle (chest/butt) in two commands
+`mrforge extract --physics`, `mrforge phys add-chain --root L_Breast_01_Jnt --root R_Breast_01_Jnt --preset jiggle`.
+Check bone names in Blender after `mesh blend` (add-chain warns on names the asset does not know). It works in
+matches; lobby assets often have no KawaiiPhysics node (extract says so) - lobby jiggle needs an Unreal-authored
+AnimBlueprint and is not automated.
 
 ## Do not
 - edit files under the game folder or `~mods` yourself; `deploy`/`undeploy` do it with receipts.
 - use obfuscate/strip/encrypt options; report load/gameplay as passed without the user's confirmation.
-- claim physics (jiggle/cloth) mods work: not covered yet.
-- rename bones or material slots in Blender; run `mrforge mesh check` before `mrforge mesh build`.
-
-## Mesh mods (body shape, outfit geometry)
-`mrforge new "<Name>" --skin <id> --kind mesh`, `mrforge mesh export --lobby`, `mrforge mesh blend`, edit the
-.blend files, `mrforge mesh check`, `mrforge mesh build`, `mrforge validate`, `mrforge package`.
+- rename bones or material slots in Blender; skip `mrforge mesh check` before building meshes.
+- assume your mod wins over an installed mod for the same skin: V-CONFLICT names them; disable them to test.

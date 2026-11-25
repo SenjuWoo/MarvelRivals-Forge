@@ -4,6 +4,8 @@ Commands
   import <addon_parent> <file.uemodel> <out.blend>   import with ueformat-blender (never installed), save
   fbx <in.blend> <out.fbx>                           export FBX without leaf bones
   summary <in.blend>                                 print bones, material slots, vertex groups, counts
+  inflate <in.blend> <spec.json>                     scale the skin around bones by their weights, save in place
+  render <in.blend> <out_prefix> [focus_bone]        front + side workbench renders (<prefix>_front.png, _side.png)
 Every command prints one line `MRFORGE_JSON:{...}`.
 """
 import hashlib
@@ -28,6 +30,89 @@ def summary() -> dict:
             h = hashlib.sha256(json.dumps(bones).encode()).hexdigest()
             arms.append({"name": ob.name, "bone_count": len(bones), "bones": bones, "hierarchy_sha256": h})
     return {"meshes": meshes, "armatures": arms}
+
+
+def inflate(spec: dict) -> dict:
+    """Push vertices away from (factor > 1) or toward (< 1) each listed bone's head, scaled by how much the vertex
+    follows that bone or its children. Bones, weights and material slots stay as they are; shape keys get the same
+    offset so their deltas are kept."""
+    from mathutils import Vector
+    arms = [o for o in bpy.data.objects if o.type == "ARMATURE"]
+    if len(arms) != 1:
+        raise SystemExit(f"expected one armature, found {len(arms)}")
+    arm = arms[0]
+    report = []
+    for ob in [o for o in bpy.data.objects if o.type == "MESH"]:
+        me = ob.data
+        to_obj = ob.matrix_world.inverted() @ arm.matrix_world
+        moved, max_off = 0, 0.0
+        offsets = [Vector((0.0, 0.0, 0.0)) for _ in me.vertices]
+        for item in spec["bones"]:
+            bone = arm.data.bones.get(item["bone"])
+            if bone is None:
+                raise SystemExit(f"bone {item['bone']} not in the armature")
+            names = {bone.name} | ({c.name for c in bone.children_recursive} if spec.get("children", True) else set())
+            groups = {g.index for g in ob.vertex_groups if g.name in names}
+            if not groups:
+                continue
+            center = to_obj @ bone.head_local
+            f = float(item.get("factor", spec.get("factor", 1.2))) - 1.0
+            for v in me.vertices:
+                w = min(1.0, sum(e.weight for e in v.groups if e.group in groups))
+                if w <= 0.0:
+                    continue
+                offsets[v.index] += (v.co - center) * (f * w)
+        keys = me.shape_keys.key_blocks if me.shape_keys else None
+        for v, off in zip(me.vertices, offsets):
+            if off.length == 0.0:
+                continue
+            moved += 1
+            max_off = max(max_off, off.length)
+            v.co += off
+            if keys:
+                for kb in keys:
+                    kb.data[v.index].co += off
+        me.update()
+        report.append({"mesh": ob.name, "moved_vertices": moved, "max_offset": round(max_off, 4)})
+    return {"inflate": report}
+
+
+def render(prefix: str, focus: str | None) -> dict:
+    import math
+    from mathutils import Vector
+    arm = next(o for o in bpy.data.objects if o.type == "ARMATURE")
+    meshes = [o for o in bpy.data.objects if o.type == "MESH"]
+    if focus and focus in arm.data.bones:
+        center = arm.matrix_world @ arm.data.bones[focus].head_local
+        scale = 0.6
+    else:
+        pts = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
+        lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
+        hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
+        center, scale = (lo + hi) / 2, max(hi - lo) * 1.05
+    sc = bpy.context.scene
+    for o in list(bpy.data.objects):
+        if o.type not in ("MESH", "ARMATURE"):
+            bpy.data.objects.remove(o)
+    cam = bpy.data.cameras.new("mrf_cam")
+    cam.type, cam.ortho_scale = "ORTHO", scale
+    co = bpy.data.objects.new("mrf_cam", cam)
+    sc.collection.objects.link(co)
+    sc.camera = co
+    sc.render.engine = "BLENDER_WORKBENCH"
+    sc.display.shading.light = "STUDIO"
+    sc.display.shading.color_type = "SINGLE"
+    sc.render.resolution_x = sc.render.resolution_y = 512
+    out = {}
+    # The character faces -Y (Unreal forward imported by UEFormat): front camera on -Y, side camera on +X.
+    for view, off, rot in (("front", Vector((0, -3, 0)), (math.radians(90), 0, 0)),
+                           ("side", Vector((3, 0, 0)), (math.radians(90), 0, math.radians(90)))):
+        co.location = center + off
+        co.rotation_euler = rot
+        sc.render.filepath = f"{prefix}_{view}.png"
+        bpy.ops.render.render(write_still=True)
+        out[view] = sc.render.filepath
+    return {"renders": out}
 
 
 def main(argv):
@@ -79,6 +164,14 @@ def main(argv):
         bpy.ops.export_scene.fbx(filepath=argv[2], add_leaf_bones=False, use_selection=False,
                                  object_types={"ARMATURE", "MESH"}, mesh_smooth_type="FACE")
         res = {"fbx": argv[2], **summary()}
+    elif cmd == "inflate":
+        bpy.ops.wm.open_mainfile(filepath=argv[1])
+        res = inflate(json.load(open(argv[2], encoding="utf-8")))
+        bpy.ops.wm.save_as_mainfile(filepath=argv[1])
+        res.update(summary())
+    elif cmd == "render":
+        bpy.ops.wm.open_mainfile(filepath=argv[1])
+        res = render(argv[2], argv[3] if len(argv) > 3 else None)
     elif cmd == "summary":
         bpy.ops.wm.open_mainfile(filepath=argv[1])
         res = summary()

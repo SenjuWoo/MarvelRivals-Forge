@@ -272,6 +272,76 @@
       "tier": "verified-local",
       "source": "T33 live",
       "date": "2026-11-15"
+    },
+    {
+      "id": "game.build4066382",
+      "statement": "Game build 1.1.4066382 (S11.0) has an exact rivals-depot mapping; vanilla index 318,153 packages in 40 containers.",
+      "tier": "verified-local",
+      "source": "mrforge sync + index live",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.asset",
+      "statement": "Post_<skin>_Physics is an AnimBlueprintGeneratedClass; its CDO holds one AnimNode_* struct per node in LinkID order (Post_1061303_Physics: 73 nodes, 34 KawaiiPhysics, 52 chains).",
+      "tier": "verified-local",
+      "source": "UAssetTool to_json live",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.chains",
+      "statement": "KawaiiPhysics nodes in game data carry Chains[] with up to 11 chains per node, each with its own root bone and settings.",
+      "tier": "verified-local",
+      "source": "Post_1061303_Physics live",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.roundtrip",
+      "statement": "to_json -> from_json of Post_1061303_Physics keeps .uexp byte-identical; the CDO re-parses after appending chains.",
+      "tier": "verified-local",
+      "source": "live spike",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.header",
+      "statement": "Dropping the node-level unversioned header of AnimNode_KawaiiPhysics makes the CDO unparseable (RawExport); dropping an inner struct header (BoneSettings) works.",
+      "tier": "verified-local",
+      "source": "live bisect",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.order",
+      "statement": "On 1061303 the RivetConstraint nodes that read the breast bones run before every KawaiiPhysics node; the last-evaluated KawaiiPhysics node is AnimGraphNode_KawaiiPhysics_5.",
+      "tier": "verified-local",
+      "source": "pose-link walk live",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.lobby",
+      "statement": "Post_1061303_Lobby_Physics has 34 anim nodes and no KawaiiPhysics node (constraints, rivets, pose drivers only).",
+      "tier": "verified-local",
+      "source": "live",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.reference_mod",
+      "statement": "An installed community body mod replaces Post_1061303_Lobby_Physics with an Unreal-authored AnimBlueprint (AnimInstance parent) using AnimNode_SpringBone on breast, butt and thigh bones.",
+      "tier": "verified-local",
+      "source": "UAssetTool to_json of the installed mod",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "physics.bones1061",
+      "statement": "SK_1061_1061303: L/R_Breast_01_Jnt (parent spine_04) -> L/R_Breast_02_Jnt, about 3.4 cm apart; each weighted to about 1,100 and 930 vertices.",
+      "tier": "verified-local",
+      "source": "Blender import live",
+      "date": "2026-11-25"
+    },
+    {
+      "id": "pack.mixed",
+      "statement": "UAssetTool create_mod_iostore packs legacy textures (inject_texture output) and from_json physics assets together; both read back unchanged.",
+      "tier": "verified-local",
+      "source": "live",
+      "date": "2026-11-25"
     }
   ]
 }

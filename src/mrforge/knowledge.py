@@ -45,6 +45,9 @@ def _score(request: str, route: dict) -> int:
     return score
 
 
+KINDS_ROUTES = ("texture", "material", "mesh", "physics")
+
+
 def plan(request: str, route_status: dict | None = None) -> dict:
     rs = routes()
     scored = sorted(((_score(request, r), i, r) for i, r in enumerate(rs)), key=lambda x: (-x[0], x[1]))
@@ -56,6 +59,12 @@ def plan(request: str, route_status: dict | None = None) -> dict:
            "commands": best["commands"], "docs": best.get("docs", []), "avoid": best.get("avoid", []),
            "confidence": "matched" if best_score else "default (no keyword matched; texture is the usual skin route)",
            "alternatives": alts}
+    # Requests that name two editable routes ("bigger chest and jiggle") are one project with both kinds.
+    strong = [r["id"] for sc, _, r in scored[1:] if sc >= 2 and r["id"] in KINDS_ROUTES and best["id"] in KINDS_ROUTES]
+    if strong:
+        out["combine"] = {"routes": [best["id"], *strong],
+                          "how": f"one project: mrforge new \"<Mod Name>\" --skin <skinId> --kind {','.join([best['id'], *strong])}; "
+                                 "do each route's edit steps, then one mrforge build"}
     if route_status is not None:
         out["availability"] = route_status.get(best.get("doctor_route", best["id"]), "unknown")
     return out

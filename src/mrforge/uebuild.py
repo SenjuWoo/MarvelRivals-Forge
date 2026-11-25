@@ -1,5 +1,5 @@
-"""Mesh build through Unreal Engine 5.3.2 (spike, PLAN T32): vanilla refs -> UE import with placeholders -> cook
--> collect the cooked mesh only -> retoc pack.
+"""Mesh build through Unreal Engine 5.3.2: vanilla refs -> UE import with placeholders -> cook -> collect the cooked
+mesh only (packing happens in build.py, decision D26).
 
 Project: .mrforge/ue/Marvel (named exactly Marvel so cooked paths are Marvel/Content/...), pak/IoStore off.
 """
@@ -169,49 +169,12 @@ def _cook_one(root: Path, groot: Path, pkg: str, usmap: Path, stage: Path) -> di
 
 
 def build(root: Path, game_arg=None) -> dict:
-    """Every exported mesh of the project (in-match, and _Lobby when exported) -> one mod container."""
-    from .util import sha256_file
-    root = Path(root).resolve()  # UnrealEditor runs with its own working directory
-    m = P.manifest(root)
-    groot, _ = find_game(game_arg)
-    cl = version(groot)["changelist"]
-    usmap = require_usmap(cl)
-    t0 = time.time()
-    exp = json.loads((root / "work" / "mesh" / "export.json").read_text(encoding="utf-8"))
-    pkgs = [x["package"] for x in exp["meshes"]]
-    stage = root / "build" / "stage" / m["pak_name"]
-    if stage.parent.exists():
-        shutil.rmtree(stage.parent)
-    done = [_cook_one(root, groot, pkg, usmap, stage) for pkg in pkgs]
-    dist = root / "dist"
-    dist.mkdir(exist_ok=True)
-    for ext in (".pak", ".utoc", ".ucas"):
-        (dist / f"{m['pak_name']}_9999999_P{ext}").unlink(missing_ok=True)
-    # retoc refuses tagged cooks ("Expected to find zero UE3 version"); UAssetTool is the mesh packer.
-    pr = T.run_tool("uassettool", ["create_mod_iostore", fwd(dist / f"{m['pak_name']}_9999999_P"),
-                                   *[fwd(x["staged"]) for x in done]], timeout=1800)
-    out = dist / f"{m['pak_name']}_9999999_P.utoc"
-    if pr["rc"] != 0 or not out.is_file() or "SUCCESS" not in pr["stdout"]:
-        raise ForgeError("PACK_FAILED", (pr["stdout"] + pr["stderr"])[-600:])
-    checks = {x["package"]: verify_against_vanilla(root, groot, out, x["package"], x["vanilla_raw"], usmap) for x in done}
-    tr = [dist / f"{m['pak_name']}_9999999_P{e}" for e in (".pak", ".utoc", ".ucas")]
-    receipt = {"mod": m["id"], "name": m["name"], "version": m["version"], "skin_id": m["skin_id"], "route": "mesh",
-               "changelist": cl, "usmap": usmap.name, "built": time.strftime("%Y-%m-%dT%H:%M:%S"),
-               "tools": {n: {"tag": T.entry(n)["tag"], "exe_sha256": T.entry(n)["exe_sha256"]}
-                         for n in ("uassettool", "rivals-mesh-material-manager")},
-               "ue": detect().get("version"), "staged_packages": pkgs,
-               "inputs": {f"work/mesh/{Path(p).stem}.blend": sha256_file(root / "work" / "mesh" / (Path(p).stem + ".blend"))
-                          for p in pkgs},
-               "outputs": {p.name: sha256_file(p) for p in tr}, "mesh_checks": checks,
-               "options": {"obfuscate": False, "strip": False, "encrypt": False}}
-    save_json(dist / "receipt.json", receipt)
-    warnings = []
-    if not any(p.endswith("_Lobby.uasset") for p in pkgs):
-        warnings.append("only the in-match mesh was built: the lobby/hero-select mesh stays vanilla (mrforge mesh export --lobby)")
-    meshes = [{k: (str(v) if isinstance(v, Path) else v) for k, v in x.items() if k not in ("staged", "vanilla_raw")}
-              for x in done]
-    return {"packages": pkgs, "packed": str(out), "mesh_checks": checks, "warnings": warnings, "meshes": meshes,
-            "seconds": round(time.time() - t0, 1)}
+    """`mrforge mesh build`: the project build with every exported mesh cooked, edited or not (selftest round trip)."""
+    from .build import run
+    d = run(root, game_arg, force_meshes=True)
+    d["packed"] = d["outputs"][1] if len(d["outputs"]) > 1 else None
+    d["packages"] = [x["package"] for x in d["meshes"]] or d["packages"]
+    return d
 
 
 def verify_against_vanilla(root: Path, groot: Path, utoc: Path, pkg: str, vanilla_raw: Path, usmap: Path) -> dict:

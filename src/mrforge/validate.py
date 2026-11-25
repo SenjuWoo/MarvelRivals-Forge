@@ -11,6 +11,7 @@ from pathlib import Path
 
 from . import index as I
 from . import mat as M
+from . import phys as PH
 from . import project as P
 from .build import triple
 from .extract import load_lock
@@ -44,7 +45,7 @@ def run(root: Path, game_arg=None, deep: bool = True) -> tuple[dict, bool]:
     root = Path(root)
     m = P.manifest(root)
     receipt = load_json(root / "dist" / "receipt.json", {})
-    mesh_route = receipt.get("route") == "mesh"
+    mesh_route = receipt.get("route") == "mesh" or "mesh" in receipt.get("routes", [])
     lk = load_lock(root, required=not mesh_route)  # mesh projects have no texture/material extraction
     lk.setdefault("changelist", receipt.get("changelist") or m.get("game_changelist"))
     res: list[dict] = []
@@ -70,7 +71,8 @@ def run(root: Path, game_arg=None, deep: bool = True) -> tuple[dict, bool]:
     res.append(_r("V-PATHS", "fail" if (unknown or not pkgs) else "pass",
                   (f"not in vanilla build {lk['changelist']}: {unknown[:10]}" if unknown else
                    f"{len(pkgs)} packages, all vanilla paths") if pkgs else "container lists no packages", "static"))
-    allow = {I.norm_pkg(a).lower() for a in m.get("allow", [])}
+    # Deliberate edits of the skin's post-process AnimBlueprint (physics route) are not placeholder leaks.
+    allow = {I.norm_pkg(a).lower() for a in m.get("allow", []) + receipt.get("physics_edits", [])}
     leaks = [p for p in pkgs if (I.classify(p) in LEAK_CLASSES or "placeholder" in p.lower()) and p.lower() not in allow]
     res.append(_r("V-LEAK", "fail" if leaks else "pass",
                   f"skeleton/physics/placeholder packages packed: {leaks}" if leaks else "no skeleton, physics or placeholder packages",
@@ -102,11 +104,12 @@ def _roundtrip(root: Path, m: dict, lk: dict, pkgs: list[str], groot: Path) -> l
     usmap = require_usmap(lk["changelist"])
     tex = {n: t for n, t in lk["textures"].items() if t["package"] in pkgs}
     mats = {k: r for k, r in lk["materials"].items() if r["package"] in pkgs}
-    if not tex and not mats:
+    phys = {k: r for k, r in lk.get("physics", {}).items() if r["package"] in pkgs}
+    if not tex and not mats and not phys:
         return out
     tmp = Path(tempfile.mkdtemp(prefix="mrf-validate-"))
     try:
-        patterns = [pattern_for(t["package"]) for t in tex.values()] + [pattern_for(r["package"]) for r in mats.values()]
+        patterns = [pattern_for(x["package"]) for x in (*tex.values(), *mats.values(), *phys.values())]
         extract_vanilla(layout(groot)["paks_dir"], tmp / "raw", patterns, mod=str(triple(root, m)[".utoc"]))
         problems, warns, details = [], [], []
         for n, t in tex.items():
@@ -157,6 +160,30 @@ def _roundtrip(root: Path, m: dict, lk: dict, pkgs: list[str], groot: Path) -> l
         if mats:
             out.append(_r("V-MAT", "fail" if mprob else "pass",
                           "; ".join(mprob) or f"{len(mats)} materials read back from the mod with the edited values", "package"))
+        pprob, pdetail = [], []
+        all_ops = PH.load_ops(root)["assets"]
+        for k, rec in phys.items():
+            ua = tmp / "raw" / rec["package"]
+            jd = tmp / "pjson"
+            jd.mkdir(exist_ok=True)
+            r = run_tool("uassettool", ["to_json", fwd(ua), fwd(usmap), fwd(jd)], timeout=600)
+            j = jd / (Path(rec["package"]).stem + ".json")
+            if r["rc"] != 0 or not j.is_file():
+                pprob.append(f"{k}: not readable from the mod")
+                continue
+            try:
+                d = load_json(j)
+                probs = PH.verify(d, all_ops.get(k, []))
+                info = PH.listing(d)
+            except Exception as e:  # an unparsed export is a failure, not a crash
+                probs, info = [f"{getattr(e, 'message', e)}"], {"chains": [], "kawaii_nodes": 0}
+            pprob += [f"{k}: {p}" for p in probs]
+            pdetail.append({"asset": k, "kawaii_nodes": info["kawaii_nodes"], "chains": len(info["chains"]),
+                            "ops": len(all_ops.get(k, []))})
+        if phys:
+            out.append({**_r("V-PHYS", "fail" if pprob else "pass",
+                             "; ".join(pprob[:8]) or f"{len(phys)} physics assets read back from the mod with every edit "
+                             "(chains, roots, parameters)", "package"), "physics": pdetail})
     except Exception as e:
         out.append(_r("V-ROUNDTRIP", "fail", f"round trip failed: {getattr(e, 'message', e)}", "package"))
     finally:
@@ -170,7 +197,7 @@ def _mesh_rule(root: Path, groot: Path, utoc: Path, receipt: dict, changelist: i
     from .uebuild import verify_against_vanilla
     usmap = require_usmap(changelist)
     problems, warns, details = [], [], {}
-    pkgs = receipt.get("staged_packages", [])
+    pkgs = receipt.get("mesh_packages", receipt.get("staged_packages", []))
     for pkg in pkgs:
         van = root / "vanilla" / "raw" / pkg
         if not van.is_file():

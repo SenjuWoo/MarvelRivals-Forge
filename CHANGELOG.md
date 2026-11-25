@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.0.0 - 2026-11-25
+
+Physics route, scripted body-shape edits and one build for every route.
+
+- Physics route (no Unreal Editor): `mrforge extract --physics` converts the skin's post-process AnimBlueprints
+  (`Post_<skin>_Physics`, `_Lobby_Physics`) to JSON; `mrforge phys list` shows every KawaiiPhysics chain in
+  evaluation order; `phys add-chain --root <bone> --preset jiggle|bouncy|firm` adds a chain (e.g. chest jiggle) to
+  the KawaiiPhysics node that runs last; `phys set <Param> <value> --bone <glob>` tunes existing hair, cloth and
+  tail chains; `phys presets`, `phys reset`. The anim graph stays untouched; `build` reads every physics edit back
+  at once and `validate` rule V-PHYS reads it back out of the packed mod. `selftest physics`.
+- `mrforge mesh inflate --bone <b> --factor <f>`: weight-driven body-shape edit (grow/shrink around bones) on the
+  in-match and lobby `.blend` files; bones, weights, slots and shape-key deltas kept; logged in `work/mesh/edits.json`.
+- `mrforge mesh preview`: vanilla | edited renders (front, side) in `build/preview/<mesh>.png`.
+- `mrforge build` builds every route into one container: textures, materials, physics and edited meshes (only
+  meshes whose `.blend` changed are cooked). With meshes the packer is UAssetTool, otherwise retoc.
+  `mrforge mesh build` is the same build with every exported mesh cooked.
+- `doctor` reports the physics route; `plan` routes jiggle/cloth/hair requests to it; `new --kind physics`.
+- Verified against game build 1.1.4066382: live end-to-end test mod on skin 1061303 (body texture hue, chest
+  inflate on both meshes, chest jiggle chains) passes every static/build/package rule.
+- Fixes: `extract` no longer lists earlier extractions as unrequested; stale "v0.2 preview" messages removed.
+
 ## 0.2.0 - 2026-11-15
 
 Mesh route: body shape and outfit geometry edits through Blender and Unreal Engine 5.3.2, verified against vanilla.
