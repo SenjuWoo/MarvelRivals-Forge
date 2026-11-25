@@ -2,7 +2,7 @@
 
 Version: 1.1.0 (lobby spring jiggle built headless in UE 5.3.2; chest jiggle confirmed in game)
 Updated: 2026-11-25
-Last known-good release: v1.0.1 (tag on 5faa5a3, CI green, published asset re-hashed)
+Last known-good release: v1.1.0 (tag on 80a3ecf, CI green, published asset re-hashed)
 
 ## Goal
 
