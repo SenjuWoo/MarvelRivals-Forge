@@ -1,8 +1,8 @@
 # STATE
 
-Version: 1.2.0 (sound route without Wwise; test sound heard in game)
+Version: 1.2.1 (extract fix for Texture/ and Material/ folders, launcher exit code, README and cover)
 Updated: 2026-11-25
-Last known-good release: v1.2.0 (see the v1.2.0 tag; CI green, published asset re-hashed)
+Last known-good release: v1.2.1 (see the v1.2.1 tag; CI green on the tagged commit); previous v1.2.0
 
 ## Goal
 
@@ -74,3 +74,4 @@ None required. Optional: owner look at butt/thigh jiggle and in-match chains; an
 - 2026-11-25 owner: lobby chest jiggle works -> regions (butt, thighs), weight guard, v1.1.0 released.
 - 2026-11-25 owner: sounds the RoR2 way (no Wwise download) -> v1.2.0 sound route (in-place PCM bank media).
 - 2026-11-25 owner heard the test beep -> v1.2.0 released; animation-per-skin researched (lobby/MVP only).
+- 2026-11-25 presentation pass: two defects found by running the README for real -> v1.2.1.

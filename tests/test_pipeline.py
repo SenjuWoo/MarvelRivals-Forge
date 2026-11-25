@@ -1,6 +1,7 @@
 """Whole loop through the CLI with tool shims: new -> extract -> edit -> build -> validate -> package -> deploy."""
 import json
 import os
+import unittest
 import zipfile
 from pathlib import Path
 
@@ -157,3 +158,22 @@ class CheckLoad(ForgeCase):
         code, d = self.cli("check-load", "--project", root, "--confirm", "red suit visible in lobby")
         m = json.loads((Path(root) / "mrforge.json").read_text(encoding="utf-8"))
         self.assertEqual(m["evidence"][0]["tier"], "load")
+
+
+class TextureFolderNames(unittest.TestCase):
+    def test_extract_selects_singular_texture_folder(self):
+        # About a third of the skins (Storm's default 1015001 among them) keep textures in "Texture/" (and some
+        # materials in "Material/"), not the plural; extract once matched nothing for them.
+        from mrforge.extract import select
+        paths = ["Marvel/Content/Marvel/Characters/1015/1015001/Texture/T_1015001_Body_D.uasset",
+                 "Marvel/Content/Marvel/Characters/1015/1015001/Texture/T_1015001_Head_D.uasset",
+                 "Marvel/Content/Marvel/Characters/1061/1061303/Textures/T_1061303_Body_01_D.uasset",
+                 "Marvel/Content/Marvel/Characters/1015/1015001/Material/MI_1015001_Body.uasset"]
+        idx = {"containers": ["c"], "packages": {p: [0, 1, 10, 20] for p in paths}}
+        idx["_lower"] = {p.lower(): p for p in paths}
+        chosen = [c["path"] for c in select(idx, "1015001", ["T_1015001_Body_*"], False, False, None, False)]
+        self.assertEqual(chosen, [paths[0]])
+        chosen = [c["path"] for c in select(idx, "1061303", ["T_*_Body_*"], False, False, None, False)]
+        self.assertEqual(chosen, [paths[2]])
+        chosen = [c["path"] for c in select(idx, "1015001", None, True, False, None, False)]
+        self.assertEqual(chosen, [paths[3]])

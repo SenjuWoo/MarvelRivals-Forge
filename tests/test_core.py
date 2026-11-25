@@ -70,6 +70,30 @@ class CliContract(ForgeCase):
                            env={k: v for k, v in os.environ.items() if k != "PYTHONPATH"})
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
         self.assertEqual(json.loads(p.stdout)["data"]["version"], __version__)
+        p = subprocess.run([str(odd / "mrforge.cmd"), "knowledge", "no-such-topic"], cwd=odd, capture_output=True,
+                           env={k: v for k, v in os.environ.items() if k != "PYTHONPATH"})
+        self.assertEqual(p.returncode, 1, p.stdout + p.stderr)
+
+    def test_cmd_launcher_keeps_exit_code_with_venv(self):
+        # The .venv branch once ran inside a parenthesised block, where %ERRORLEVEL% is expanded before the
+        # program runs, so every failure exited 0.
+        if os.name != "nt":
+            self.skipTest("Windows launcher")
+        odd = self.tmp / "forge venv ! (x)"
+        odd.mkdir()
+        shutil.copyfile(ROOT / "mrforge.cmd", odd / "mrforge.cmd")
+        subprocess.run([sys.executable, "-m", "venv", "--without-pip", str(odd / ".venv")], check=True,
+                       capture_output=True)
+        (odd / ".venv" / "Lib" / "site-packages" / "mrforge-src.pth").write_text(str(ROOT / "src") + "\n",
+                                                                               encoding="utf-8")
+        env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+        p = subprocess.run([str(odd / "mrforge.cmd"), "version"], cwd=odd, capture_output=True, env=env)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        p = subprocess.run([str(odd / "mrforge.cmd"), "knowledge", "no-such-topic"], cwd=odd, capture_output=True,
+                           env=env)
+        self.assertEqual(p.returncode, 1, p.stdout + p.stderr)
+        p = subprocess.run([str(odd / "mrforge.cmd"), "no-such-command"], cwd=odd, capture_output=True, env=env)
+        self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
 
 
 class Home(ForgeCase):

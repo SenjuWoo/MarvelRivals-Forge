@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="MarvelRivals-Forge: a white anvil on a tile split diagonally into red and blue halves by a lightning seam">
+  <defs>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff4a5e"/>
+      <stop offset="1" stop-color="#d0122c"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3f7dff"/>
+      <stop offset="1" stop-color="#1c3fb8"/>
+    </linearGradient>
+    <clipPath id="tile"><rect width="512" height="512" rx="96"/></clipPath>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="11" cy="11" r="4" fill="#ffffff" opacity="0.22"/>
+    </pattern>
+  </defs>
+  <g clip-path="url(#tile)">
+    <!-- the two rival halves, split by a lightning seam -->
+    <rect width="512" height="512" fill="url(#blue)"/>
+    <path d="M0 0H536L296 404L352 414L236 536H0Z" fill="url(#red)"/>
+    <!-- comic halftone in the corners -->
+    <path d="M0 0H200L0 200Z" fill="url(#dots)"/>
+    <path d="M512 512H312L512 312Z" fill="url(#dots)"/>
+    <!-- the seam itself -->
+    <polyline points="536,0 296,404 352,414 236,536" fill="none" stroke="#ffffff" stroke-width="18" stroke-linejoin="miter"/>
+  </g>
+  <!-- anvil: horn, face, waist, foot -->
+  <path fill="#ffffff" stroke="#0d0f1a" stroke-width="16" stroke-linejoin="miter" d="M70 218H380V200H444V288H352L316 320V354H354L376 392H136L158 354H196V320L160 288H136Z"/>
+  <!-- face highlight -->
+  <rect x="196" y="234" width="172" height="12" fill="#ff2b45"/>
+  <!-- spark -->
+  <path fill="#ffffff" d="M120 70L132 104L166 116L132 128L120 162L108 128L74 116L108 104Z"/>
+</svg>

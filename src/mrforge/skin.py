@@ -82,7 +82,7 @@ def _deep(groot: Path, cl: int, sid: str, groups: dict, refresh: bool) -> dict:
         try:
             refs = M.package_refs(d)
             deep["materials"][key] = {"parent": M.parent(d), "params": len(M.params(d)),
-                                      "textures": [r_ for r_ in refs if "/Textures/" in r_]}
+                                      "textures": [r_ for r_ in refs if "/textures/" in r_.lower() or "/texture/" in r_.lower()]}
             for r_ in refs:
                 if f"/{sid}/" not in r_ and "/Characters/" in r_:
                     shared.add(r_)

@@ -54,10 +54,10 @@ def select(idx: dict, skin_id: str, textures: list[str] | None, materials: bool,
             continue
         if physics and is_postprocess(p["path"], skin_id):
             chosen.append(p)
-        elif "/textures/" in low and stem.startswith("T_"):
+        elif ("/textures/" in low or "/texture/" in low) and stem.startswith("T_"):  # both folder names ship
             if all_ or (textures and any(fnmatch.fnmatchcase(stem, g) for g in textures)):
                 chosen.append(p)
-        elif cls == "material" and "/materials/" in low:
+        elif cls == "material" and ("/materials/" in low or "/material/" in low):
             if all_ or materials:
                 chosen.append(p)
     for e in extra or []:

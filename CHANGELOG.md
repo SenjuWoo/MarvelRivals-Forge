@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.1 - 2026-11-25
+
+Fixes found while checking the README against real runs.
+
+- Fixed: `mrforge extract --textures` matched nothing for skins whose textures live in a `Texture/` folder (about
+  a third of all skins, Storm's default 1015001 among them); `--materials` had the same gap for `Material/`.
+  Both folder spellings are now selected, and `skin inspect`'s deep material view lists textures from either.
+- Fixed: the checkout launcher `mrforge.cmd` exited 0 on every failure when a `.venv` was present
+  (`%ERRORLEVEL%` was read inside a parenthesised block). It now passes the forge's exit code through.
+- README rewritten: cover image, real terminal shots, a tour that works with names in the skin table, the full
+  command table and the install options. Icon in `docs/icon.svg`.
+
 ## 1.2.0 - 2026-11-25
 
 Sound route: replace a skin's sounds with your own audio. No Wwise and no Unreal Editor.
